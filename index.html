@@ -23,45 +23,56 @@
       const style = doc.createElement('style');
       style.id = 'presentation-accessibility-upgrades';
       style.textContent = `
-        html, body { background: #210c2c !important; }
-        #layer-bg { background: #210c2c !important; }
+        html, body, #layer-bg { background: #210c2c !important; }
         .nebula-orb { display: none !important; }
-        #layer-slides { overflow-y: auto !important; scrollbar-width: thin; scrollbar-color: rgba(192,132,252,.55) rgba(15,7,26,.35); }
-        .slide-overlay { padding: clamp(14px,2.1vh,26px) clamp(16px,4vw,64px) !important; }
+        /* A quiet purple cover; reveal the 3D biology only after the presenter advances. */
+        body:has(.slide-overlay[data-slide="0"].active) #layer-webgl { opacity: 0 !important; }
+        #layer-webgl { z-index: 1 !important; }
+        #layer-depth-typo { z-index: 2 !important; }
+        #layer-slides { overflow-y: auto !important; scrollbar-width: thin; scrollbar-color: rgba(192,132,252,.65) rgba(15,7,26,.35); }
+        .slide-overlay { padding: clamp(16px,2.2vh,28px) clamp(18px,4vw,64px) !important; }
         .slide-overlay.active { overflow-y: auto !important; }
-        #layer-slides [class~="text-xs"] { font-size: clamp(15px,1.08vw,19px) !important; line-height: 1.45 !important; }
-        #layer-slides [class~="text-sm"] { font-size: clamp(16px,1.2vw,21px) !important; line-height: 1.45 !important; }
-        #layer-slides [class~="text-[9px]"], #layer-slides [class~="text-[9.5px]"], #layer-slides [class~="text-[10px]"] { font-size: clamp(13px,.95vw,16px) !important; line-height: 1.35 !important; }
-        #layer-slides [class~="text-[11px]"] { font-size: clamp(14px,1vw,17px) !important; line-height: 1.4 !important; }
-        #depth-title { font-size: clamp(50px,7.6vw,112px) !important; max-width: 92vw !important; line-height: .92 !important; }
-        #depth-title.size-xl { font-size: clamp(72px,13vw,190px) !important; }
-        #depth-kicker { font-size: clamp(12px,1vw,16px) !important; }
+        #layer-slides [class~="text-xs"] { font-size: clamp(15px,1.12vw,20px) !important; line-height: 1.48 !important; }
+        #layer-slides [class~="text-sm"] { font-size: clamp(16px,1.22vw,22px) !important; line-height: 1.48 !important; }
+        #layer-slides [class~="text-[9px]"], #layer-slides [class~="text-[9.5px]"], #layer-slides [class~="text-[10px]"] { font-size: clamp(13px,.98vw,17px) !important; line-height: 1.4 !important; }
+        #layer-slides [class~="text-[11px]"] { font-size: clamp(14px,1.04vw,18px) !important; line-height: 1.42 !important; }
+        #depth-title { font-size: clamp(48px,7vw,108px) !important; max-width: 92vw !important; line-height: .94 !important; }
+        #depth-title.size-xl { font-size: clamp(68px,11vw,165px) !important; }
+        #depth-kicker { font-size: clamp(12px,1vw,17px) !important; }
         body:has(.slide-overlay[data-slide="1"].active) #layer-depth-typo,
         body:has(.slide-overlay[data-slide="2"].active) #layer-depth-typo,
-        body:has(.slide-overlay[data-slide="5"].active) #layer-depth-typo { justify-content: flex-start !important; padding-top: 68px !important; }
-        #layerDetailTag, #layerDetailSpec, #layerDetailMetric { font-size: clamp(13px,1vw,16px) !important; }
+        body:has(.slide-overlay[data-slide="5"].active) #layer-depth-typo { justify-content: flex-start !important; padding-top: clamp(62px,8vh,92px) !important; }
+        #layerDetailTag, #layerDetailSpec, #layerDetailMetric { font-size: clamp(14px,1.08vw,18px) !important; line-height: 1.45 !important; }
         .slide-overlay[data-slide="5"] #layerBtn-1, .slide-overlay[data-slide="5"] #layerBtn-2,
         .slide-overlay[data-slide="5"] #layerBtn-3, .slide-overlay[data-slide="5"] #layerBtn-4,
-        .slide-overlay[data-slide="5"] #layerBtn-5 { padding-top: 12px !important; padding-bottom: 12px !important; }
-        [data-count-target] { font-size: clamp(40px,4vw,62px) !important; }
-        [data-count-target] + div { font-size: clamp(14px,1vw,17px) !important; }
+        .slide-overlay[data-slide="5"] #layerBtn-5 { padding: 13px 12px !important; }
+        .slide-overlay[data-slide="5"] #layerBtn-1 span, .slide-overlay[data-slide="5"] #layerBtn-2 span,
+        .slide-overlay[data-slide="5"] #layerBtn-3 span, .slide-overlay[data-slide="5"] #layerBtn-4 span,
+        .slide-overlay[data-slide="5"] #layerBtn-5 span { font-size: clamp(13px,.98vw,17px) !important; line-height: 1.4 !important; }
+        [data-count-target] { font-size: clamp(40px,4vw,64px) !important; }
+        [data-count-target] + div { font-size: clamp(14px,1.04vw,18px) !important; line-height: 1.4 !important; }
         .readability-float { transition: transform .6s cubic-bezier(.2,.8,.2,1); transform: translate(var(--float-x,0px),var(--float-y,0px)); }
         .editorial-figure { position: absolute; z-index: 0; pointer-events: none; filter: drop-shadow(0 18px 34px rgba(0,0,0,.4)); }
-        .slide-overlay[data-slide="1"] > .editorial-figure { width: clamp(230px,26vw,390px); right: 33%; top: 28%; opacity: .94; }
-        .slide-overlay[data-slide="10"] > .editorial-figure { width: clamp(240px,30vw,420px); right: 3%; top: 24%; opacity: .9; }
+        /* Pump appears beside the autoimmune-attack scene on slide 2 only. */
+        .slide-overlay[data-slide="1"] > .editorial-figure { width: clamp(205px,23vw,340px); right: 31%; top: 31%; opacity: .92; }
+        /* Slide 6 hardware schematic complements the existing interactive exploded 3D model. */
+        .slide-overlay[data-slide="5"] > .editorial-figure { width: clamp(210px,24vw,350px); left: 50%; top: 49%; transform: translate(-50%,-50%); opacity: .94; }
+        .slide-overlay[data-slide="10"] > .editorial-figure { width: clamp(230px,28vw,390px); right: 3%; top: 25%; opacity: .92; }
         .slide-overlay[data-slide="1"] > :not(.editorial-figure),
+        .slide-overlay[data-slide="5"] > :not(.editorial-figure),
         .slide-overlay[data-slide="10"] > :not(.editorial-figure) { position: relative; z-index: 1; }
         @media (max-width: 900px) {
           #layer-slides [class~="text-xs"] { font-size: 15px !important; }
-          .slide-overlay[data-slide="1"] > .editorial-figure { width: 210px; right: 5%; top: 38%; opacity: .35; }
-          .slide-overlay[data-slide="10"] > .editorial-figure { width: 220px; right: 3%; top: 36%; opacity: .28; }
+          .slide-overlay[data-slide="1"] > .editorial-figure { width: 185px; right: 3%; top: 42%; opacity: .3; }
+          .slide-overlay[data-slide="5"] > .editorial-figure { width: 190px; top: 50%; opacity: .32; }
+          .slide-overlay[data-slide="10"] > .editorial-figure { width: 195px; right: 2%; top: 40%; opacity: .3; }
         }
         @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
       `;
       doc.head.appendChild(style);
 
       const pumpFigure = `
-        <figure class="editorial-figure" aria-label="Illustrative insulin pump and tubing beside the autoimmune attack scene">
+        <figure class="editorial-figure" aria-label="Concept illustration inspired by a MiniMed 780G insulin pump, with tubing; not an official product rendering">
           <svg viewBox="0 0 420 300" role="img" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <linearGradient id="pumpShell" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f8f2ff"/><stop offset=".5" stop-color="#b9a2d8"/><stop offset="1" stop-color="#725b98"/></linearGradient>
@@ -77,43 +88,86 @@
               <text x="109" y="119" fill="#f8fafc" font-family="monospace" font-size="31" font-weight="700">0.8</text>
               <text x="178" y="119" fill="#c4b5fd" font-family="monospace" font-size="13">U / h</text>
               <path d="M108 139h24l10-12 13 13 10-8 12 7h58" fill="none" stroke="#22d3ee" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-              <circle cx="174" cy="193" r="22" fill="#36224b" stroke="#eadcff" stroke-width="2"/>
-              <path d="m168 193 6-7 6 7-6 7z" fill="#d9c3f5"/>
-              <circle cx="119" cy="193" r="10" fill="#563d70" stroke="#d7c6e8"/>
-              <circle cx="229" cy="193" r="10" fill="#563d70" stroke="#d7c6e8"/>
+              <circle cx="174" cy="193" r="22" fill="#36224b" stroke="#eadcff" stroke-width="2"/><path d="m168 193 6-7 6 7-6 7z" fill="#d9c3f5"/>
+              <circle cx="119" cy="193" r="10" fill="#563d70" stroke="#d7c6e8"/><circle cx="229" cy="193" r="10" fill="#563d70" stroke="#d7c6e8"/>
             </g>
             <path d="M276 225 C330 235 348 197 338 166 C327 132 365 123 384 144" fill="none" stroke="#b6f3ff" stroke-width="5" stroke-linecap="round"/>
             <circle cx="384" cy="144" r="13" fill="#22d3ee" stroke="#e0fbff" stroke-width="3"/>
-            <rect x="75" y="267" width="275" height="27" rx="13" fill="#150b22" fill-opacity=".88" stroke="#a855f7" stroke-opacity=".6"/>
-            <text x="212" y="285" text-anchor="middle" fill="#f3e8ff" font-family="Inter,Arial" font-size="13" font-weight="700">INSULIN PUMP · ILLUSTRATIVE</text>
+            <rect x="55" y="267" width="310" height="27" rx="13" fill="#150b22" fill-opacity=".92" stroke="#a855f7" stroke-opacity=".6"/>
+            <text x="210" y="285" text-anchor="middle" fill="#f3e8ff" font-family="Inter,Arial" font-size="12" font-weight="700">MINIMED 780G-INSPIRED · CONCEPT ILLUSTRATION</text>
+          </svg>
+        </figure>`;
+
+      const hardwareFigure = `
+        <figure class="editorial-figure" aria-label="Conceptual exploded 3D-style EndoCore implant showing sensors, two peptide reservoirs, and layered casing">
+          <svg viewBox="0 0 440 330" role="img" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="chipTop" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f5d0fe"/><stop offset=".48" stop-color="#a855f7"/><stop offset="1" stop-color="#4c1d95"/></linearGradient>
+              <linearGradient id="chipSide" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#6b21a8"/><stop offset="1" stop-color="#20102f"/></linearGradient>
+              <linearGradient id="chamber" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#a5f3fc"/><stop offset="1" stop-color="#0891b2"/></linearGradient>
+              <filter id="chipGlow"><feGaussianBlur stdDeviation="10"/></filter>
+            </defs>
+            <ellipse cx="218" cy="282" rx="160" ry="20" fill="#a855f7" opacity=".27" filter="url(#chipGlow)"/>
+            <!-- Floating sensor layer -->
+            <g transform="translate(0 -9)">
+              <path d="M112 76 215 38 328 76 224 115Z" fill="#1d1530" stroke="#facc15" stroke-width="2"/>
+              <g fill="#facc15" stroke="#fff7cc" stroke-width="2">
+                <circle cx="151" cy="74" r="7"/><circle cx="177" cy="64" r="7"/><circle cx="204" cy="55" r="7"/><circle cx="231" cy="65" r="7"/><circle cx="258" cy="75" r="7"/><circle cx="285" cy="84" r="7"/>
+              </g>
+              <text x="220" y="132" fill="#fde68a" font-family="monospace" font-size="12" text-anchor="middle">16× BIOSENSOR ARRAY · IL-6 / IFN-γ / pH</text>
+            </g>
+            <!-- Reservoir cartridges -->
+            <g transform="translate(0 7)">
+              <path d="M128 146 218 112 309 145 220 181Z" fill="#10212f" stroke="#22d3ee" stroke-width="2"/>
+              <path d="M151 145 185 132 211 142 177 155Z" fill="url(#chamber)" stroke="#cffafe"/>
+              <path d="M228 145 262 132 289 142 255 155Z" fill="#34d399" stroke="#d1fae5"/>
+              <path d="M177 155v21l34 12v-46M255 155v21l34 12v-46" fill="#123342" stroke="#67e8f9" stroke-width="1.5"/>
+              <text x="193" y="205" fill="#a5f3fc" font-family="monospace" font-size="11" text-anchor="middle">IL-10</text>
+              <text x="272" y="205" fill="#a7f3d0" font-family="monospace" font-size="11" text-anchor="middle">TGF-β</text>
+            </g>
+            <!-- Main implant shell / chip -->
+            <path d="M82 220 217 169 357 218 220 270Z" fill="url(#chipSide)" stroke="#c084fc" stroke-width="2"/>
+            <path d="M82 205 217 155 357 203 220 254Z" fill="url(#chipTop)" stroke="#f3e8ff" stroke-width="2.5"/>
+            <path d="M116 205 219 168 324 205 220 242Z" fill="#171126" stroke="#67e8f9" stroke-width="2"/>
+            <rect x="191" y="185" width="55" height="38" rx="7" transform="rotate(-20 218 204)" fill="#0f172a" stroke="#34d399" stroke-width="2"/>
+            <text x="218" y="211" fill="#a7f3d0" font-family="monospace" font-size="9" text-anchor="middle">TINYML</text>
+            <text x="220" y="300" fill="#f3e8ff" font-family="Inter,Arial" font-size="13" font-weight="700" text-anchor="middle">EXPLODED CONCEPT · NOT TO SCALE</text>
+            <path d="M77 88h28M332 91h34M78 178h28M332 170h35" stroke="#c4b5fd" stroke-width="1.5" stroke-dasharray="4 4"/>
+            <text x="18" y="85" fill="#e9d5ff" font-family="monospace" font-size="10">SENSORS</text>
+            <text x="337" y="84" fill="#e9d5ff" font-family="monospace" font-size="10">SIGNAL</text>
+            <text x="14" y="175" fill="#a5f3fc" font-family="monospace" font-size="10">RESERVOIRS</text>
+            <text x="345" y="166" fill="#a5f3fc" font-family="monospace" font-size="10">MICRO-VALVES</text>
           </svg>
         </figure>`;
 
       const economyFigure = `
         <figure class="editorial-figure" aria-label="Illustrative five-year cost comparison chart">
           <svg viewBox="0 0 440 250" role="img" xmlns="http://www.w3.org/2000/svg">
-            <defs><linearGradient id="econBarA" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#a855f7"/><stop offset="1" stop-color="#e879f9"/></linearGradient><linearGradient id="econBarB" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#06b6d4"/><stop offset="1" stop-color="#34d399"/></linearGradient></defs>
-            <rect x="8" y="8" width="424" height="234" rx="24" fill="#160c24" fill-opacity=".94" stroke="#c084fc" stroke-opacity=".5"/>
-            <text x="32" y="42" fill="#e9d5ff" font-family="monospace" font-size="14" font-weight="700" letter-spacing="2">5-YEAR COST MODEL · ILLUSTRATIVE</text>
-            <text x="32" y="88" fill="#cbd5e1" font-family="Inter,Arial" font-size="16">Current care</text>
-            <rect x="150" y="69" width="238" height="28" rx="14" fill="url(#econBarA)"/>
-            <text x="32" y="145" fill="#cbd5e1" font-family="Inter,Arial" font-size="16">EndoCore model</text>
-            <rect x="150" y="126" width="104" height="28" rx="14" fill="url(#econBarB)"/>
-            <path d="M32 177h376" stroke="#7c668e" stroke-opacity=".55"/>
-            <text x="32" y="206" fill="#67e8f9" font-family="monospace" font-size="15" font-weight="700">173,325 SAR  vs  27,100 SAR</text>
-            <text x="32" y="228" fill="#a78bba" font-family="Inter,Arial" font-size="12">Assumptions and follow-up costs remain stated on slide</text>
+            <defs>
+              <linearGradient id="econBarA" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#a855f7"/><stop offset="1" stop-color="#e879f9"/></linearGradient>
+              <linearGradient id="econBarB" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#06b6d4"/><stop offset="1" stop-color="#34d399"/></linearGradient>
+            </defs>
+            <rect x="8" y="8" width="424" height="234" rx="24" fill="#160c24" fill-opacity=".96" stroke="#c084fc" stroke-opacity=".6"/>
+            <text x="30" y="42" fill="#e9d5ff" font-family="monospace" font-size="14" font-weight="700" letter-spacing="1">5-YEAR COST MODEL · ILLUSTRATIVE</text>
+            <text x="30" y="88" fill="#cbd5e1" font-family="Inter,Arial" font-size="16">Current care</text><rect x="150" y="69" width="238" height="28" rx="14" fill="url(#econBarA)"/>
+            <text x="30" y="145" fill="#cbd5e1" font-family="Inter,Arial" font-size="16">EndoCore model</text><rect x="150" y="126" width="104" height="28" rx="14" fill="url(#econBarB)"/>
+            <path d="M30 177h378" stroke="#7c668e" stroke-opacity=".65"/>
+            <text x="30" y="206" fill="#67e8f9" font-family="monospace" font-size="15" font-weight="700">173,325 SAR  vs  27,100 SAR</text>
+            <text x="30" y="228" fill="#c4b5fd" font-family="Inter,Arial" font-size="12">Illustrative; assumptions and follow-up costs are on slide</text>
           </svg>
         </figure>`;
 
       const addFigures = () => {
         const problem = doc.querySelector('.slide-overlay[data-slide="1"]');
+        const hardware = doc.querySelector('.slide-overlay[data-slide="5"]');
         const economy = doc.querySelector('.slide-overlay[data-slide="10"]');
         if (problem && !problem.querySelector('.editorial-figure')) problem.insertAdjacentHTML('afterbegin', pumpFigure);
+        if (hardware && !hardware.querySelector('.editorial-figure')) hardware.insertAdjacentHTML('afterbegin', hardwareFigure);
         if (economy && !economy.querySelector('.editorial-figure')) economy.insertAdjacentHTML('afterbegin', economyFigure);
       };
       addFigures();
 
-      // Hold cinematic headings for 6.5 seconds, while slide movement remains manual.
+      // Keep every slide change under presenter control; titles fade after 6.5 seconds.
       if (typeof win.updateDepthTypography === 'function') {
         const originalTitleUpdate = win.updateDepthTypography;
         let titleTimer;
@@ -133,13 +187,31 @@
       const varyStatPositions = () => {
         doc.querySelectorAll('.slide-overlay [data-count-target]').forEach((stat) => {
           stat.classList.add('readability-float');
-          stat.style.setProperty('--float-x', `${Math.round(Math.random() * 14 - 7)}px`);
-          stat.style.setProperty('--float-y', `${Math.round(Math.random() * 12 - 6)}px`);
+          stat.style.setProperty('--float-x', `${Math.round(Math.random() * 18 - 9)}px`);
+          stat.style.setProperty('--float-y', `${Math.round(Math.random() * 16 - 8)}px`);
         });
       };
+
+      // Zoom the biology and exploded implant out slightly so the full scene is easier to see.
+      let requestedSlide = 0;
+      let slideTransition = false;
+      if (typeof win.launchCameraFlight === 'function') {
+        const originalFlight = win.launchCameraFlight;
+        win.launchCameraFlight = function (position, target, duration) {
+          let adjustedPosition = position;
+          if (slideTransition && Array.isArray(position) && Array.isArray(target)) {
+            const zoom = requestedSlide === 5 ? 1.28 : ([1, 2, 4].includes(requestedSlide) ? 1.12 : 1);
+            adjustedPosition = position.map((value, i) => target[i] + (value - target[i]) * zoom);
+          }
+          slideTransition = false;
+          return originalFlight.call(this, adjustedPosition, target, duration);
+        };
+      }
       const originalGoToSlide = win.goToSlide;
       if (typeof originalGoToSlide === 'function') {
         win.goToSlide = function (index) {
+          requestedSlide = index;
+          slideTransition = true;
           const result = originalGoToSlide.call(this, index);
           addFigures();
           varyStatPositions();
