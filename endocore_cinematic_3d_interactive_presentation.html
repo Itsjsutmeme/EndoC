@@ -1,0 +1,3179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EndoCore — Cinematic 3D Presentation &amp; Digital Twin (MEDATHON 2026)</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Three.js r128 & OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <!-- Google Fonts: Bebas Neue (Depth Display), Inter (Editorial UI), JetBrains Mono (Telemetry) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg-plum-center: #2e113d;
+      --bg-plum-mid: #210c2c;
+      --bg-plum-edge: #16071f;
+      --accent-cyan: #22d3ee;
+      --accent-teal: #14b8a6;
+      --accent-purple: #a855f7;
+      --accent-gold: #facc15;
+      --accent-emerald: #10b981;
+      --accent-coral: #e14b56;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: radial-gradient(circle at 50% 42%, #2e113d 0%, #210c2c 55%, #16071f 100%);
+      color: #f8fafc;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .font-display {
+      font-family: 'Bebas Neue', Impact, sans-serif;
+    }
+
+    .font-mono-tech {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* =========================================================================
+       LAYER 0: PLUM RADIAL NEBULA + AMBIENT FLOATING MICRO-DUST
+    ========================================================================= */
+    #layer-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background: radial-gradient(circle at 50% 42%, #2e113d 0%, #210c2c 55%, #16071f 100%);
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .nebula-orb {
+      position: absolute;
+      border-radius: 9999px;
+      filter: blur(110px);
+      opacity: 0.28;
+      animation: driftOrb 18s ease-in-out infinite alternate;
+    }
+
+    .nebula-orb-1 {
+      width: 44vw;
+      height: 44vw;
+      top: -12vw;
+      left: 24vw;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.7) 0%, rgba(168, 85, 247, 0) 70%);
+    }
+
+    .nebula-orb-2 {
+      width: 38vw;
+      height: 38vw;
+      bottom: -10vw;
+      right: 12vw;
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.55) 0%, rgba(6, 182, 212, 0) 70%);
+      animation-delay: -6s;
+    }
+
+    .nebula-orb-3 {
+      width: 32vw;
+      height: 32vw;
+      bottom: 8vw;
+      left: -6vw;
+      background: radial-gradient(circle, rgba(225, 75, 86, 0.35) 0%, rgba(225, 75, 86, 0) 70%);
+      animation-delay: -11s;
+    }
+
+    @keyframes driftOrb {
+      0% { transform: translate3d(0, 0, 0) scale(1); }
+      100% { transform: translate3d(3vw, -2.5vh, 0) scale(1.12); }
+    }
+
+    /* Subtle speed-warp vignette triggered during camera flight */
+    #warp-vignette {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      pointer-events: none;
+      background: radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0) 42%, rgba(12, 4, 20, 0.85) 100%);
+      opacity: 0;
+      transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    #warp-vignette.warping {
+      opacity: 0.92;
+    }
+
+    /* =========================================================================
+       LAYER 1: GIANT DEPTH-LAYERED DISPLAY TYPOGRAPHY (SITS BEHIND 3D WEBGL!)
+    ========================================================================= */
+    #layer-depth-typo {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0 3vw;
+      user-select: none;
+    }
+
+    #depth-kicker {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(10px, 0.9vw, 13px);
+      letter-spacing: 0.42em;
+      text-transform: uppercase;
+      color: rgba(167, 243, 208, 0.65);
+      margin-bottom: 0.4vh;
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity 0.65s ease, transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    #depth-title {
+      font-family: 'Bebas Neue', Impact, sans-serif;
+      font-size: clamp(56px, 12.2vw, 225px);
+      line-height: 0.86;
+      letter-spacing: 0.03em;
+      text-align: center;
+      text-transform: uppercase;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(233, 213, 255, 0.62) 60%, rgba(168, 85, 247, 0.28) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      filter: drop-shadow(0 18px 42px rgba(10, 3, 18, 0.72));
+      opacity: 0;
+      transform: translateY(36px) scale(0.92);
+      transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+      max-width: 96vw;
+      word-spacing: 0.06em;
+    }
+
+    #depth-title.visible,
+    #depth-kicker.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    #depth-title.exiting,
+    #depth-kicker.exiting {
+      opacity: 0;
+      transform: translateY(-24px) scale(1.06);
+      transition: opacity 0.32s ease, transform 0.38s ease;
+    }
+
+    #depth-title.size-xl {
+      font-size: clamp(72px, 15.2vw, 270px);
+    }
+
+    #depth-title.size-md {
+      font-size: clamp(50px, 10.6vw, 195px);
+    }
+
+    #depth-title.tone-danger {
+      background: linear-gradient(180deg, rgba(255, 241, 242, 0.92) 0%, rgba(253, 164, 175, 0.64) 65%, rgba(225, 75, 86, 0.28) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+
+    #depth-title.tone-cyan {
+      background: linear-gradient(180deg, rgba(240, 253, 250, 0.94) 0%, rgba(103, 232, 249, 0.68) 62%, rgba(6, 182, 212, 0.28) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+
+    #depth-title.tone-gold {
+      background: linear-gradient(180deg, rgba(254, 252, 232, 0.94) 0%, rgba(253, 224, 71, 0.65) 62%, rgba(245, 158, 11, 0.25) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+
+    /* =========================================================================
+       LAYER 2: TRANSPARENT 3D WEBGL SCENE CANVAS (IN FRONT OF DEPTH TYPOGRAPHY!)
+    ========================================================================= */
+    #layer-webgl {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      touch-action: none;
+    }
+
+    #layer-webgl.interactive-cursor {
+      cursor: grab;
+    }
+    #layer-webgl.interactive-cursor:active {
+      cursor: grabbing;
+    }
+
+    /* =========================================================================
+       LAYER 3: FOREGROUND EDITORIAL OVERLAYS & LOWER-THIRD METRICS
+    ========================================================================= */
+    #layer-slides {
+      position: fixed;
+      top: 56px;
+      bottom: 54px;
+      left: 0;
+      right: 0;
+      z-index: 3;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .slide-overlay {
+      position: absolute;
+      inset: 0;
+      padding: 18px 28px 14px 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translateY(18px);
+      transition: opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1), transform 0.65s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.55s;
+    }
+
+    .slide-overlay.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .glass-card {
+      background: rgba(15, 7, 26, 0.72);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(192, 132, 252, 0.24);
+      box-shadow: 0 18px 42px rgba(6, 2, 14, 0.58), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      pointer-events: auto;
+    }
+
+    .glass-card-cyan {
+      background: rgba(8, 20, 34, 0.74);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(34, 211, 238, 0.32);
+      box-shadow: 0 18px 42px rgba(4, 10, 20, 0.6), inset 0 1px 0 rgba(165, 243, 252, 0.08);
+      pointer-events: auto;
+    }
+
+    .glass-card-danger {
+      background: rgba(28, 8, 18, 0.74);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(244, 63, 94, 0.34);
+      box-shadow: 0 18px 42px rgba(18, 2, 10, 0.62), inset 0 1px 0 rgba(254, 205, 211, 0.08);
+      pointer-events: auto;
+    }
+
+    .glass-card-gold {
+      background: rgba(24, 16, 8, 0.72);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(250, 204, 21, 0.30);
+      box-shadow: 0 18px 42px rgba(12, 6, 2, 0.6), inset 0 1px 0 rgba(254, 240, 138, 0.08);
+      pointer-events: auto;
+    }
+
+    .interactive-el {
+      pointer-events: auto;
+    }
+
+    /* Custom Range Sliders (Slide 07 Live Simulator) */
+    input[type="range"].endo-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      background: transparent;
+      cursor: pointer;
+    }
+    input[type="range"].endo-slider:focus {
+      outline: none;
+    }
+    input[type="range"].endo-slider::-webkit-slider-runnable-track {
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.32);
+    }
+    input[type="range"].endo-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: #a855f7;
+      border: 2px solid #ffffff;
+      margin-top: -5px;
+      box-shadow: 0 0 10px rgba(168, 85, 247, 0.85);
+      transition: transform 0.15s ease;
+    }
+    input[type="range"].endo-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+      background: #22d3ee;
+    }
+
+    /* Custom Scrollbars inside compact drawers */
+    .scrollable-panel {
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(168, 85, 247, 0.45) rgba(15, 23, 42, 0.2);
+    }
+    .scrollable-panel::-webkit-scrollbar {
+      width: 4px;
+    }
+    .scrollable-panel::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.2);
+    }
+    .scrollable-panel::-webkit-scrollbar-thumb {
+      background: rgba(168, 85, 247, 0.5);
+      border-radius: 999px;
+    }
+
+    /* Bottom Chapter Scrubber */
+    .chapter-dot {
+      transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .chapter-dot.active {
+      background: linear-gradient(90deg, #a855f7, #22d3ee);
+      width: 28px;
+      box-shadow: 0 0 12px rgba(34, 211, 238, 0.7);
+    }
+
+    /* Active layer button glow on Slide 06 */
+    .layer-btn-active {
+      background: rgba(6, 182, 212, 0.22) !important;
+      border-color: rgba(34, 211, 238, 0.78) !important;
+      box-shadow: 0 0 18px rgba(34, 211, 238, 0.25);
+    }
+
+    /* Auto-cinema progress strip */
+    #autoCinemaBar {
+      position: fixed;
+      top: 56px;
+      left: 0;
+      height: 2px;
+      width: 0%;
+      z-index: 45;
+      background: linear-gradient(90deg, #a855f7, #22d3ee, #facc15);
+      box-shadow: 0 0 8px rgba(34, 211, 238, 0.8);
+      transition: width 0.1s linear;
+    }
+
+    @media (max-width: 900px) {
+      .slide-overlay {
+        padding: 12px 14px 10px 14px;
+      }
+      #depth-title {
+        font-size: clamp(44px, 14vw, 110px);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =========================================================================
+       LAYER 0: DEEP PLUM RADIAL BACKGROUND + AMBIENT NEBULA GLOWS
+  ========================================================================= -->
+  <div id="layer-bg" aria-hidden="true">
+    <div class="nebula-orb nebula-orb-1"></div>
+    <div class="nebula-orb nebula-orb-2"></div>
+    <div class="nebula-orb nebula-orb-3"></div>
+  </div>
+
+  <!-- =========================================================================
+       LAYER 1: GIANT DEPTH-LAYERED DISPLAY TYPOGRAPHY (BEHIND 3D WEBGL)
+  ========================================================================= -->
+  <div id="layer-depth-typo" aria-hidden="true">
+    <div id="depth-kicker">MEDATHON 2026 FINALS · AQYXBQ</div>
+    <div id="depth-title" class="size-xl">ENDOCORE</div>
+  </div>
+
+  <!-- =========================================================================
+       LAYER 2: TRANSPARENT 3D THREE.JS WEBGL CANVAS (IN FRONT OF TYPOGRAPHY!)
+  ========================================================================= -->
+  <div id="layer-webgl"></div>
+
+  <!-- Speed-Warp Motion Vignette Overlay during Camera Flights -->
+  <div id="warp-vignette" aria-hidden="true"></div>
+
+  <!-- Auto-Cinema Progress Line -->
+  <div id="autoCinemaBar"></div>
+
+  <!-- =========================================================================
+       PERSISTENT COMPANY HEADER (FIXED TOP BAR, Z-40)
+  ========================================================================= -->
+  <header class="fixed top-0 left-0 right-0 h-14 z-40 bg-[#0d0517]/80 backdrop-blur-xl border-b border-purple-500/25 px-3 sm:px-5 flex items-center justify-between gap-2">
+    <!-- Left: Preserved EndoCore Company Identity -->
+    <button onclick="goToSlide(0)" class="flex items-center gap-2.5 text-left group focus:outline-none">
+      <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-purple-500/30 border border-white/25 shrink-0 group-hover:scale-105 transition">
+        <!-- Shield Check Inline SVG -->
+        <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          <path d="m9 12 2 2 4-4"></path>
+        </svg>
+      </div>
+      <div class="leading-tight">
+        <div class="flex items-center gap-2">
+          <span class="font-extrabold text-sm sm:text-base tracking-tight text-white">EndoCore</span>
+          <span class="text-[9px] sm:text-[10px] font-mono-tech uppercase px-2 py-0.5 rounded bg-purple-500/20 text-purple-200 border border-purple-400/35 font-semibold tracking-wider">
+            LOCALIZED IMMUNOMODULATION
+          </span>
+        </div>
+        <p class="text-[10px] sm:text-[11px] text-slate-400 hidden md:block">
+          AQYXBQ · Medical Tools &amp; Devices Innovation
+        </p>
+      </div>
+    </button>
+
+    <!-- Right: Slide Indicator + Cinema Controls + Live Simulator Jump + Nav -->
+    <div class="flex items-center gap-1.5 sm:gap-2">
+      <!-- Slide Counter -->
+      <div class="hidden sm:flex items-center px-2.5 py-1 rounded-lg bg-slate-900/80 border border-purple-500/25 font-mono-tech text-xs">
+        <span id="headerSlideNum" class="text-cyan-300 font-bold">01</span>
+        <span class="text-slate-500 mx-1">/</span>
+        <span class="text-slate-400">13</span>
+      </div>
+
+      <!-- Auto-Cinema Play/Pause -->
+      <button id="autoCinemaBtn" onclick="toggleAutoCinema()" class="px-2.5 py-1.5 rounded-lg bg-slate-900/85 hover:bg-purple-900/60 border border-purple-500/30 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition" title="Toggle Auto-Cinema Playback">
+        <svg id="autoCinemaIcon" class="w-3.5 h-3.5 text-cyan-400" viewBox="0 0 24 24" fill="currentColor">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        <span id="autoCinemaText" class="hidden lg:inline">Auto-Cinema</span>
+      </button>
+
+      <!-- Live Simulator Quick-Jump (Slide 07) -->
+      <button onclick="goToSlide(6)" class="px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-purple-600/90 to-cyan-600/90 hover:from-purple-500 hover:to-cyan-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-cyan-500/20 border border-white/15 transition" title="Jump to Slide 07: Live TinyML 3D Digital Twin">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48 2.83-2.83"></path>
+        </svg>
+        <span class="hidden md:inline">Live Simulator</span>
+      </button>
+
+      <!-- Fullscreen Toggle -->
+      <button onclick="toggleFullscreen()" class="p-1.5 rounded-lg bg-slate-900/85 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white transition hidden sm:flex items-center justify-center" title="Toggle Fullscreen">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+        </svg>
+      </button>
+
+      <!-- Prev / Next Arrows -->
+      <div class="flex items-center bg-slate-900/90 rounded-lg border border-purple-500/30 p-0.5">
+        <button id="prevBtn" onclick="prevSlide()" class="p-1.5 rounded-md hover:bg-purple-600/30 text-slate-300 hover:text-white disabled:opacity-30 transition" title="Previous Slide (Left Arrow)">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <button id="nextBtn" onclick="nextSlide()" class="p-1.5 rounded-md hover:bg-purple-600/30 text-slate-300 hover:text-white disabled:opacity-30 transition" title="Next Slide (Right Arrow / Space)">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       LAYER 3: 13 FOREGROUND EDITORIAL SLIDE OVERLAYS
+  ========================================================================= -->
+  <main id="layer-slides">
+
+    <!-- ==================== SLIDE 01: COVER ==================== -->
+    <section class="slide-overlay active" data-slide="0">
+      <!-- Top Subtle Badge -->
+      <div class="flex items-center justify-between">
+        <div class="glass-card px-3.5 py-1.5 rounded-full flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+          <span class="font-mono-tech text-[11px] uppercase tracking-widest text-cyan-300">MEDATHON 2026 FINALS · AQYXBQ</span>
+        </div>
+        <div class="glass-card px-3 py-1.5 rounded-full hidden sm:flex items-center gap-2 text-[11px] font-mono-tech text-purple-200">
+          <span>3D WEBGL CINEMA DECK</span>
+          <span class="text-purple-400">·</span>
+          <span class="text-cyan-300">TRL 3–4 IN-SILICO MVP</span>
+        </div>
+      </div>
+
+      <!-- Lower-Third Hero Copy + CTA + 3 Pillars -->
+      <div class="space-y-4">
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div class="glass-card rounded-2xl p-4 sm:p-5 max-w-xl">
+            <p class="text-[11px] font-mono-tech uppercase tracking-widest text-purple-300 mb-1">Biohybrid Pancreatic Shield</p>
+            <h1 class="text-lg sm:text-2xl font-extrabold text-white leading-snug">
+              AI-Driven Biohybrid Nanochip &amp; Localized Immunomodulation for Type 1 Diabetes
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-300 mt-1.5 leading-relaxed">
+              An AirTag-sized implantable pod that senses local autoimmune attacks in under 50 ms and re-educates immunity right at the islet — without systemic immunosuppression.
+            </p>
+          </div>
+          <div class="flex items-center gap-2.5 interactive-el">
+            <button onclick="nextSlide()" class="px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 via-fuchsia-600 to-cyan-500 hover:brightness-110 text-white font-bold text-sm shadow-xl shadow-purple-600/35 flex items-center gap-2 transition transform hover:-translate-y-0.5">
+              <span>Begin Presentation</span>
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <div class="glass-card rounded-xl px-4 py-2.5 flex items-center gap-3">
+            <span class="font-mono-tech text-xs font-bold text-purple-400">01</span>
+            <div>
+              <div class="text-xs font-bold text-white tracking-wide uppercase">Biohybrid Implant</div>
+              <div class="text-[11px] text-slate-400">CRISPR β-cells behind &lt;30 nm nanoporous filter</div>
+            </div>
+          </div>
+          <div class="glass-card-cyan rounded-xl px-4 py-2.5 flex items-center gap-3">
+            <span class="font-mono-tech text-xs font-bold text-cyan-400">02</span>
+            <div>
+              <div class="text-xs font-bold text-white tracking-wide uppercase">&lt;50 ms TinyML AI</div>
+              <div class="text-[11px] text-slate-400">16× electrochemical cytokine &amp; pH nano-sensors</div>
+            </div>
+          </div>
+          <div class="glass-card rounded-xl px-4 py-2.5 flex items-center gap-3 border-emerald-500/30">
+            <span class="font-mono-tech text-xs font-bold text-emerald-400">03</span>
+            <div>
+              <div class="text-xs font-bold text-white tracking-wide uppercase">Local Immune Shield</div>
+              <div class="text-[11px] text-slate-400">On-demand IL-10 &amp; TGF-β exosomal Treg induction</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 02: THE PROBLEM ==================== -->
+    <section class="slide-overlay" data-slide="1">
+      <div class="flex flex-col lg:flex-row items-start justify-between gap-4 mt-1">
+        <!-- Left Lived Quote -->
+        <div class="glass-card-danger rounded-2xl p-4 sm:p-5 max-w-md">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+            <span class="font-mono-tech text-[10px] uppercase tracking-widest text-rose-300 font-bold">01 · THE PROBLEM — FIRST-HAND REALITY</span>
+          </div>
+          <blockquote class="text-xs sm:text-sm text-rose-50/95 italic leading-relaxed font-medium">
+            “I wear an insulin pump. Every three days a cannula goes back into my body. Every night carries the risk of a low I will not wake up for. Every meal is arithmetic. Insulin keeps me alive — <span class="text-rose-300 not-italic font-bold">it does not repair what is broken.</span>”
+          </blockquote>
+        </div>
+
+        <!-- Right Biological Mechanism -->
+        <div class="glass-card rounded-2xl p-4 max-w-sm border-rose-500/30">
+          <div class="font-mono-tech text-[10px] uppercase tracking-widest text-amber-300 font-bold mb-1">WHAT IS ACTUALLY HAPPENING</div>
+          <p class="text-xs sm:text-sm text-slate-200 leading-relaxed">
+            The immune system destroys insulin-producing <strong class="text-purple-300">beta cells</strong> (turning them grey in the 3D islet below). By diagnosis, most are already gone. Replacing the hormone does not replace the cells.
+          </p>
+        </div>
+      </div>
+
+      <!-- Lower-Third 4 Animated Stat Blocks -->
+      <div class="space-y-1.5">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+          <div class="glass-card-danger rounded-xl px-4 py-3">
+            <div class="font-display text-3xl sm:text-4xl text-white tracking-wide leading-none" data-count-target="9.1" data-count-suffix="M" data-count-decimals="1">9.1M</div>
+            <div class="text-[11px] text-rose-200/85 mt-1">People live with T1D worldwide</div>
+          </div>
+          <div class="glass-card-danger rounded-xl px-4 py-3">
+            <div class="font-display text-3xl sm:text-4xl text-amber-300 tracking-wide leading-none" data-count-target="34665" data-count-suffix=" SAR" data-count-decimals="0">34,665 SAR</div>
+            <div class="text-[11px] text-rose-200/85 mt-1">Per diabetic child / year in KSA</div>
+          </div>
+          <div class="glass-card-danger rounded-xl px-4 py-3">
+            <div class="font-display text-3xl sm:text-4xl text-rose-400 tracking-wide leading-none" data-count-target="10" data-count-suffix="×" data-count-decimals="0">10×</div>
+            <div class="text-[11px] text-rose-200/85 mt-1">Higher healthcare cost per person in KSA</div>
+          </div>
+          <div class="glass-card-danger rounded-xl px-4 py-3">
+            <div class="font-display text-3xl sm:text-4xl text-white tracking-wide leading-none" data-count-target="0" data-count-suffix="" data-count-decimals="0">0</div>
+            <div class="text-[11px] text-rose-200/85 mt-1">Approved cures available today</div>
+          </div>
+        </div>
+        <div class="text-right font-mono-tech text-[10px] text-slate-400 pr-1">
+          Sources: IDF Diabetes Atlas 11th ed. (2025) · Alhowaish 2013 · Al-Sofiani 2025
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 03: EVIDENCE OF NEED ==================== -->
+    <section class="slide-overlay" data-slide="2">
+      <!-- Top Autoantibody Legend Pill -->
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="glass-card-gold rounded-full px-3.5 py-1.5 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
+          <span class="font-mono-tech text-[10px] uppercase tracking-widest text-yellow-200 font-bold">02 · EVIDENCE OF NEED — STAGE 1–2 AUTOANTIBODIES ACTIVE IN 3D</span>
+        </div>
+        <div class="glass-card rounded-full px-3 py-1 flex items-center gap-2.5 text-[10px] font-mono-tech">
+          <span class="flex items-center gap-1 text-yellow-200"><span class="w-2 h-2 rounded-full bg-yellow-300"></span>IAA</span>
+          <span class="flex items-center gap-1 text-pink-300"><span class="w-2 h-2 rounded-full bg-pink-400"></span>GAD65</span>
+          <span class="flex items-center gap-1 text-purple-300"><span class="w-2 h-2 rounded-full bg-purple-400"></span>IA-2A</span>
+          <span class="flex items-center gap-1 text-amber-400"><span class="w-2 h-2 rounded-full bg-amber-500"></span>ZnT8A</span>
+        </div>
+      </div>
+
+      <!-- Lower-Third Split Clinical & Patient Quotes -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-end">
+        <!-- Clinical Perspective -->
+        <div class="glass-card-cyan rounded-2xl p-4 sm:p-5">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-mono-tech text-[10px] uppercase tracking-widest text-cyan-300 font-bold">Clinical Perspective</span>
+            <span class="text-[10px] font-mono-tech px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-200 border border-cyan-400/30">Physician Validation</span>
+          </div>
+          <blockquote class="text-xs sm:text-sm text-slate-100 leading-relaxed italic">
+            “The need to constantly refrigerate insulin creates a heavy burden for patients. A device like this offers more physiological control, giving patients the ability to live a normal lifestyle... allowing patients the freedom to go anywhere without carrying insulin reservoirs or external pumps.”
+          </blockquote>
+          <div class="mt-3 pt-2.5 border-t border-cyan-500/25 flex items-center justify-between">
+            <div>
+              <div class="text-xs font-bold text-white">Dr. Emad Esam Ghabashi</div>
+              <div class="text-[11px] text-cyan-300/80">Internal Medicine, Al-Noor Specialist Hospital</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lived Experience -->
+        <div class="glass-card rounded-2xl p-4 sm:p-5 border-purple-400/35">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-mono-tech text-[10px] uppercase tracking-widest text-purple-300 font-bold">The Lived Experience</span>
+            <span class="text-[10px] font-mono-tech px-2 py-0.5 rounded bg-purple-500/20 text-purple-200 border border-purple-400/30">Family Interview · KSA</span>
+          </div>
+          <blockquote class="text-xs sm:text-sm text-slate-100 leading-relaxed italic">
+            “Sending my child to school every day is terrifying... An internal device that protects and regulates itself would give our family a sense of safety we haven't felt since their diagnosis.”
+          </blockquote>
+          <div class="mt-3 pt-2.5 border-t border-purple-500/25">
+            <div class="text-xs font-bold text-white">Mother of a 12-year-old with T1D</div>
+            <div class="text-[11px] text-purple-300/80">Pediatric Type 1 Diabetes Caregiver</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 04: WHY NOTHING TODAY IS A CURE ==================== -->
+    <section class="slide-overlay" data-slide="3">
+      <div class="flex items-center justify-between">
+        <div class="glass-card rounded-full px-3.5 py-1.5">
+          <span class="font-mono-tech text-[10px] uppercase tracking-widest text-purple-300 font-bold">03 · STATUS QUO — WHY NOTHING TODAY IS A CURE</span>
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <!-- 3-Column Numbered Walls -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="glass-card rounded-2xl p-4 border-slate-500/30">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-mono-tech text-xs font-bold text-purple-400">01 — PUMPS &amp; CGM</span>
+              <span class="text-[10px] font-mono-tech px-2 py-0.5 rounded bg-slate-800 text-slate-300">Hormone Only</span>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-200 leading-relaxed">Replace the hormone externally. The body's beta cells stay dead.</p>
+            <div class="mt-2.5 text-xs font-bold text-amber-300">Management, not cure.</div>
+          </div>
+
+          <div class="glass-card-danger rounded-2xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-mono-tech text-xs font-bold text-rose-400">02 — ISLET TRANSPLANT</span>
+              <span class="text-[10px] font-mono-tech px-2 py-0.5 rounded bg-rose-500/20 text-rose-200">Graft Rejection</span>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-200 leading-relaxed">Restores insulin — but the host immune system attacks and destroys the graft.</p>
+            <div class="mt-2.5 text-xs font-bold text-rose-300">~75% fail within 5 years.</div>
+          </div>
+
+          <div class="glass-card-gold rounded-2xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-mono-tech text-xs font-bold text-amber-400">03 — IMMUNOSUPPRESSION</span>
+              <span class="text-[10px] font-mono-tech px-2 py-0.5 rounded bg-amber-500/20 text-amber-200">Systemic Toxicity</span>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-200 leading-relaxed">Protects the graft only by shutting down the entire body's immune defense.</p>
+            <div class="mt-2.5 text-xs font-bold text-amber-300">Infection &amp; malignancy risk.</div>
+          </div>
+        </div>
+
+        <!-- Center Punchline Bar -->
+        <div class="glass-card-cyan rounded-xl px-5 py-3 text-center">
+          <p class="text-xs sm:text-sm font-bold text-white">
+            The real bottleneck: <span class="text-cyan-300">we can already replace the cells.</span> We cannot protect them without suppressing the whole patient.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 05: THE SOLUTION: ENDOCORE ==================== -->
+    <section class="slide-overlay" data-slide="4">
+      <div class="flex flex-col lg:flex-row justify-between items-start gap-4 mt-1">
+        <!-- Left Core Narrative -->
+        <div class="glass-card-cyan rounded-2xl p-4 sm:p-5 max-w-md">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+            <span class="font-mono-tech text-[10px] uppercase tracking-widest text-cyan-300 font-bold">04 · THE SOLUTION — ENDOCORE BIOHYBRID SHIELD</span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-100 leading-relaxed">
+            An implant the size of an AirTag (<strong class="text-cyan-300 font-mono-tech">28 mm × 3.5 mm</strong>). Carries CRISPR gene-edited beta cells behind a <strong class="text-teal-300">&lt;30 nm nanoporous membrane</strong>, senses local tissue continuously, and releases a nanolitre of tolerogenic signal (<strong class="text-emerald-300">IL-10 &amp; TGF-β</strong>) exactly where an attack starts — and nowhere else.
+          </p>
+        </div>
+
+        <!-- Right Core Distinction Badge -->
+        <div class="glass-card rounded-2xl px-4 py-3 max-w-xs border-purple-400/40">
+          <div class="font-mono-tech text-[10px] text-purple-300 uppercase tracking-widest font-bold">Core Philosophy</div>
+          <p class="text-xs text-white font-semibold mt-1 leading-snug">
+            Immunomodulation, not immunosuppression. Re-educating <span class="text-cyan-300">1 cm³</span> instead of disabling the entire body.
+          </p>
+        </div>
+      </div>
+
+      <!-- Lower-Third 3 Pillars -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div class="glass-card-cyan rounded-xl p-3.5">
+          <div class="font-mono-tech text-[11px] font-bold text-cyan-300 mb-1">01 — LOCAL, NOT SYSTEMIC</div>
+          <p class="text-xs text-slate-200 leading-snug">No whole-body immunosuppression. The tolerogenic dose stays confined to the 1 cm³ implant microenvironment.</p>
+        </div>
+        <div class="glass-card rounded-xl p-3.5">
+          <div class="font-mono-tech text-[11px] font-bold text-purple-300 mb-1">02 — SENSES BEFORE IT ACTS</div>
+          <p class="text-xs text-slate-200 leading-snug">Four interstitial biomarkers (IL-6, IFN-γ, pH, CD8+ infiltration) scored on-device in under 50 ms.</p>
+        </div>
+        <div class="glass-card rounded-xl p-3.5 border-emerald-500/35">
+          <div class="font-mono-tech text-[11px] font-bold text-emerald-300 mb-1">03 — SEALED &amp; RETRIEVABLE</div>
+          <p class="text-xs text-slate-200 leading-snug">Zero Wi-Fi, zero Bluetooth, zero cloud exposure. Power-only induction; removable via minor outpatient procedure.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 06: 5-LAYER EXPLODED NANOCHIP ==================== -->
+    <section class="slide-overlay" data-slide="5">
+      <div class="flex items-center justify-between gap-2">
+        <div class="glass-card-cyan rounded-full px-3.5 py-1.5 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+          <span class="font-mono-tech text-[10px] uppercase tracking-widest text-cyan-200 font-bold">05 · HOW IT WORKS — INTERACTIVE 5-LAYER EXPLODED VIEW</span>
+        </div>
+        <div class="glass-card rounded-full px-3 py-1.5 text-[10px] font-mono-tech text-purple-200 hidden sm:block">
+          Drag 360° · Click any 3D layer or L01–L05 button to zoom
+        </div>
+      </div>
+
+      <!-- Left & Right Split Leaving Center Clear for Exploded 3D Chip -->
+      <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 my-auto">
+        <!-- Left Layer Selector Stack -->
+        <div class="glass-card rounded-2xl p-3 w-full lg:w-80 space-y-1.5 scrollable-panel max-h-[58vh]">
+          <div class="flex items-center justify-between px-1 pb-1 border-b border-purple-500/20">
+            <span class="font-mono-tech text-[10px] uppercase tracking-wider text-cyan-300 font-bold">Select Hardware Layer</span>
+            <button onclick="focusLayer(0)" class="text-[10px] font-mono-tech text-purple-300 hover:text-white underline">Reset View</button>
+          </div>
+          <button id="layerBtn-1" onclick="focusLayer(1)" class="w-full text-left px-3 py-2 rounded-xl bg-slate-900/70 hover:bg-purple-900/40 border border-slate-700/70 transition flex items-center justify-between">
+            <div>
+              <span class="font-mono-tech text-[10px] text-cyan-300 font-bold block">L01 · OUTER SHIELD</span>
+              <span class="text-xs font-bold text-white">Zwitterionic Hydrogel Coat</span>
+            </div>
+            <span class="text-[10px] font-mono-tech text-cyan-400">Anti-Scar</span>
+          </button>
+          <button id="layerBtn-2" onclick="focusLayer(2)" class="w-full text-left px-3 py-2 rounded-xl bg-slate-900/70 hover:bg-purple-900/40 border border-slate-700/70 transition flex items-center justify-between">
+            <div>
+              <span class="font-mono-tech text-[10px] text-teal-300 font-bold block">L02 · BIO-CORE</span>
+              <span class="text-xs font-bold text-white">Nanoporous Membrane &amp; β-Cells</span>
+            </div>
+            <span class="text-[10px] font-mono-tech text-teal-400">&lt;30 nm</span>
+          </button>
+          <button id="layerBtn-3" onclick="focusLayer(3)" class="w-full text-left px-3 py-2 rounded-xl bg-slate-900/70 hover:bg-purple-900/40 border border-slate-700/70 transition flex items-center justify-between">
+            <div>
+              <span class="font-mono-tech text-[10px] text-amber-300 font-bold block">L03 · BIOSENSORS</span>
+              <span class="text-xs font-bold text-white">16× Gold Nano-Sensors</span>
+            </div>
+            <span class="text-[10px] font-mono-tech text-amber-400">IL-6 / pH</span>
+          </button>
+          <button id="layerBtn-4" onclick="focusLayer(4)" class="w-full text-left px-3 py-2 rounded-xl bg-slate-900/70 hover:bg-purple-900/40 border border-slate-700/70 transition flex items-center justify-between">
+            <div>
+              <span class="font-mono-tech text-[10px] text-emerald-300 font-bold block">L04 · EDGE AI</span>
+              <span class="text-xs font-bold text-white">TinyML Silicon Processor</span>
+            </div>
+            <span class="text-[10px] font-mono-tech text-emerald-400">&lt;50 ms</span>
+          </button>
+          <button id="layerBtn-5" onclick="focusLayer(5)" class="w-full text-left px-3 py-2 rounded-xl bg-slate-900/70 hover:bg-purple-900/40 border border-slate-700/70 transition flex items-center justify-between">
+            <div>
+              <span class="font-mono-tech text-[10px] text-sky-300 font-bold block">L05 · ARMORY &amp; POWER</span>
+              <span class="text-xs font-bold text-white">Peptide Reservoirs &amp; Coil</span>
+            </div>
+            <span class="text-[10px] font-mono-tech text-sky-400">50 µL × 2</span>
+          </button>
+        </div>
+
+        <!-- Right Active Layer Specification Card -->
+        <div class="glass-card-cyan rounded-2xl p-4 sm:p-5 w-full lg:w-80">
+          <div class="flex items-center justify-between mb-2">
+            <span id="layerDetailTag" class="font-mono-tech text-[10px] uppercase px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-200 border border-cyan-400/40 font-bold">ALL 5 LAYERS EXPLODED</span>
+            <span id="layerDetailSpec" class="font-mono-tech text-[10px] text-purple-300">28 mm × 3.5 mm</span>
+          </div>
+          <h3 id="layerDetailTitle" class="text-sm sm:text-base font-extrabold text-white mb-2">
+            Integrated 5-Layer Biohybrid Pod
+          </h3>
+          <p id="layerDetailBody" class="text-xs text-slate-200 leading-relaxed mb-3">
+            Select any layer on the left — or click directly on the floating 3D discs in the center — to fly the camera right into its structure and examine its biological &amp; hardware role.
+          </p>
+          <div id="layerDetailMetric" class="bg-slate-950/75 border border-cyan-500/25 rounded-xl p-2.5 text-[11px] font-mono-tech text-cyan-300">
+            Status: Exploded stack live · Orbit 360° enabled
+          </div>
+        </div>
+      </div>
+
+      <div class="h-1"></div>
+    </section>
+
+    <!-- ==================== SLIDE 07: LIVE INTERACTIVE 3D DIGITAL TWIN ==================== -->
+    <section class="slide-overlay" data-slide="6">
+      <div class="flex items-center justify-between gap-2">
+        <div class="glass-card-cyan rounded-full px-3.5 py-1.5 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          <span class="font-mono-tech text-[10px] uppercase tracking-widest text-emerald-300 font-bold">06 · LIVE DIGITAL TWIN — REAL TRAINED TINYML MODEL RUNNING IN BROWSER</span>
+        </div>
+        <div class="flex items-center gap-1.5 interactive-el">
+          <button onclick="toggleSimDocks()" id="simDockToggleBtn" class="glass-card px-3 py-1 rounded-full text-[10px] font-mono-tech text-purple-200 hover:text-white transition">
+            Hide Docks (Full 3D)
+          </button>
+          <button onclick="resetSimSandbox()" class="glass-card px-3 py-1 rounded-full text-[10px] font-mono-tech text-cyan-300 hover:text-white transition">
+            Reset Sim
+          </button>
+        </div>
+      </div>
+
+      <!-- Left Control Dock & Right Telemetry Dock -->
+      <div id="simDocksWrapper" class="flex flex-col lg:flex-row items-stretch lg:items-start justify-between gap-3 my-auto transition-opacity duration-300">
+        <!-- LEFT CONTROL DOCK -->
+        <div class="glass-card rounded-2xl p-3.5 w-full lg:w-76 xl:w-80 space-y-2.5 scrollable-panel max-h-[64vh]">
+          <!-- Mode Toggle -->
+          <div>
+            <div class="font-mono-tech text-[10px] uppercase tracking-wider text-purple-300 font-bold mb-1.5">1. System Protection Mode</div>
+            <div class="grid grid-cols-2 gap-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800">
+              <button id="simModeProtBtn" onclick="setSimMode(true)" class="py-1.5 px-2 rounded-lg text-[11px] font-bold bg-gradient-to-r from-purple-600 to-cyan-600 text-white shadow transition">
+                EndoCore Shield
+              </button>
+              <button id="simModeUnprotBtn" onclick="setSimMode(false)" class="py-1.5 px-2 rounded-lg text-[11px] font-bold text-slate-400 hover:text-white transition">
+                Unprotected T1D
+              </button>
+            </div>
+          </div>
+
+          <!-- 28s Auto-Run Button -->
+          <button id="simAutoRunBtn" onclick="runSim28sAttack()" class="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-rose-600 via-purple-600 to-cyan-600 hover:brightness-110 text-white font-bold text-xs shadow-lg flex items-center justify-center gap-1.5 transition">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+            <span>Auto-Run 28s Attack Simulation</span>
+          </button>
+
+          <!-- Sliders -->
+          <div class="bg-slate-950/70 rounded-xl p-2.5 border border-slate-800/90 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="font-mono-tech text-[10px] uppercase text-cyan-300 font-bold">2. Sensor Biomarkers</span>
+              <span id="simPhasePill" class="font-mono-tech text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Baseline</span>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-[11px] mb-0.5">
+                <span class="text-slate-300">IL-6 Cytokine</span>
+                <span id="simIl6Val" class="font-mono-tech font-bold text-rose-400">4 pg/mL</span>
+              </div>
+              <input id="simIl6Slider" class="endo-slider" type="range" min="0" max="100" value="4" oninput="onSimSliderChange()" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-[11px] mb-0.5">
+                <span class="text-slate-300">IFN-γ T-Cell Signal</span>
+                <span id="simIfngVal" class="font-mono-tech font-bold text-orange-400">3 pg/mL</span>
+              </div>
+              <input id="simIfngSlider" class="endo-slider" type="range" min="0" max="100" value="3" oninput="onSimSliderChange()" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-[11px] mb-0.5">
+                <span class="text-slate-300">Local Tissue pH</span>
+                <span id="simPhVal" class="font-mono-tech font-bold text-amber-400">7.40</span>
+              </div>
+              <input id="simPhSlider" class="endo-slider" type="range" min="650" max="750" value="740" oninput="onSimSliderChange()" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-[11px] mb-0.5">
+                <span class="text-slate-300">Attacking CD8+ T-Cells</span>
+                <span id="simTcellVal" class="font-mono-tech font-bold text-emerald-400">0 Cells</span>
+              </div>
+              <input id="simTcellSlider" class="endo-slider" type="range" min="0" max="60" value="0" oninput="onSimSliderChange()" />
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-[10px] font-mono-tech text-slate-400 px-1">
+            <span>Classifier: Logistic (4 coeff)</span>
+            <span class="text-cyan-300">Threshold: 35.0%</span>
+          </div>
+        </div>
+
+        <!-- RIGHT TELEMETRY DOCK -->
+        <div class="glass-card-cyan rounded-2xl p-3.5 w-full lg:w-80 xl:w-84 space-y-2.5 scrollable-panel max-h-[64vh]">
+          <!-- Edge AI Risk Header -->
+          <div id="simAlertBox" class="rounded-xl p-2.5 border border-emerald-500/40 bg-emerald-950/35 transition-colors">
+            <div class="flex items-center justify-between text-[9px] font-mono-tech uppercase text-slate-300">
+              <span>Layer 4 Edge-AI Risk</span>
+              <span class="text-cyan-300">&lt;50 ms · 18 µW</span>
+            </div>
+            <div class="flex items-baseline justify-between mt-0.5">
+              <div id="simStatusTitle" class="text-xs font-extrabold text-emerald-300">NOMINAL: HOMEOSTASIS</div>
+              <div id="simRiskPct" class="font-mono-tech text-lg font-extrabold text-white">1.2%</div>
+            </div>
+            <!-- 28s Cycle Progress Bar -->
+            <div id="simProgressWrap" class="hidden mt-2 pt-1.5 border-t border-white/10">
+              <div class="flex justify-between text-[9px] font-mono-tech text-cyan-300 mb-1">
+                <span id="simProgressLabel">Escalating Cytokines...</span>
+                <span id="simProgressTime">28.0s</span>
+              </div>
+              <div class="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden">
+                <div id="simProgressBar" class="h-full bg-gradient-to-r from-rose-500 via-cyan-400 to-emerald-400" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Valves & Beta-Cell Viability -->
+          <div class="bg-slate-950/75 rounded-xl p-2.5 border border-slate-800 space-y-2">
+            <div>
+              <div class="flex justify-between text-[10px] mb-0.5">
+                <span class="text-cyan-300 font-semibold">IL-10 Exosome Valve</span>
+                <span id="simIl10Text" class="font-mono-tech text-cyan-300 font-bold">0% (Closed)</span>
+              </div>
+              <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                <div id="simIl10Bar" class="h-full bg-cyan-400 transition-all duration-200" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-[10px] mb-0.5">
+                <span class="text-emerald-300 font-semibold">TGF-β Treg Valve</span>
+                <span id="simTgfbText" class="font-mono-tech text-emerald-300 font-bold">0% (Closed)</span>
+              </div>
+              <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                <div id="simTgfbBar" class="h-full bg-emerald-400 transition-all duration-200" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <div class="pt-1 border-t border-slate-800">
+              <div class="flex justify-between text-[11px] mb-0.5">
+                <span class="text-purple-200 font-semibold">Beta-Cell Viability &amp; Insulin</span>
+                <span id="simInsulinText" class="font-mono-tech text-purple-300 font-bold">100%</span>
+              </div>
+              <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div id="simInsulinBar" class="h-full bg-gradient-to-r from-purple-500 to-pink-400 transition-all duration-200" style="width: 100%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lyophilized Reservoirs -->
+          <div class="bg-slate-950/75 rounded-xl p-2.5 border border-slate-800">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="font-mono-tech text-[10px] text-cyan-300 font-bold">Peptide Reservoirs (50,000 nL)</span>
+              <button onclick="refillSimReservoirs()" class="px-2 py-0.5 rounded bg-cyan-500/20 hover:bg-cyan-500/35 border border-cyan-400/40 text-[9px] font-mono-tech text-cyan-200 font-bold transition">
+                Patch Refill
+              </button>
+            </div>
+            <div class="grid grid-cols-2 gap-2 font-mono-tech text-[10px]">
+              <div class="bg-slate-900/90 rounded-lg p-1.5 border border-slate-800">
+                <div class="text-slate-400 text-[9px]">IL-10 Chamber</div>
+                <div id="simResIl10" class="text-cyan-300 font-bold">50,000 nL (100.00%)</div>
+              </div>
+              <div class="bg-slate-900/90 rounded-lg p-1.5 border border-slate-800">
+                <div class="text-slate-400 text-[9px]">TGF-β Chamber</div>
+                <div id="simResTgfb" class="text-emerald-300 font-bold">50,000 nL (100.00%)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TinyML Command Log -->
+          <div class="bg-slate-950/90 rounded-xl p-2 border border-slate-800">
+            <div class="font-mono-tech text-[9px] uppercase text-purple-300 font-bold mb-1">TinyML Command Log</div>
+            <div id="simCmdLog" class="font-mono-tech text-[9.5px] space-y-1 max-h-24 overflow-y-auto scrollable-panel text-slate-300">
+              <div class="text-emerald-400">[00.0s] &gt; Model loaded: 4 fitted logistic weights online.</div>
+              <div class="text-cyan-300">[00.0s] &gt; Homeostasis (1.2% risk). Micro-valves closed.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="h-1"></div>
+    </section>
+
+    <!-- ==================== SLIDE 08: PROTOTYPE PERFORMANCE & VALIDATION ==================== -->
+    <section class="slide-overlay" data-slide="7">
+      <div class="flex flex-col lg:flex-row justify-between items-start gap-4 mt-1">
+        <!-- Left Confusion Matrix Card -->
+        <div class="glass-card-cyan rounded-2xl p-4 w-full max-w-md">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-mono-tech text-[10px] uppercase tracking-widest text-cyan-300 font-bold">07 · VALIDATION — CONFUSION MATRIX</span>
+            <span class="font-mono-tech text-[10px] text-slate-300">n = 1,500 held-out</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-center font-mono-tech my-2">
+            <div class="bg-emerald-950/60 border border-emerald-500/35 rounded-xl p-2.5">
+              <div class="text-[10px] text-emerald-300">TRUE NEGATIVE</div>
+              <div class="text-2xl font-extrabold text-white">732</div>
+              <div class="text-[9px] text-slate-400">Quiet state preserved</div>
+            </div>
+            <div class="bg-slate-900/70 border border-slate-700/70 rounded-xl p-2.5">
+              <div class="text-[10px] text-amber-300">FALSE POSITIVE</div>
+              <div class="text-2xl font-extrabold text-amber-200">49</div>
+              <div class="text-[9px] text-slate-400">Cautious micro-dose</div>
+            </div>
+            <div class="bg-slate-900/70 border border-slate-700/70 rounded-xl p-2.5">
+              <div class="text-[10px] text-rose-300">FALSE NEGATIVE</div>
+              <div class="text-2xl font-extrabold text-rose-200">40</div>
+              <div class="text-[9px] text-slate-400">Borderline samples</div>
+            </div>
+            <div class="bg-cyan-950/60 border border-cyan-500/40 rounded-xl p-2.5">
+              <div class="text-[10px] text-cyan-300">TRUE POSITIVE</div>
+              <div class="text-2xl font-extrabold text-white">679</div>
+              <div class="text-[9px] text-slate-400">Attack intercepted</div>
+            </div>
+          </div>
+          <div class="text-[10px] font-mono-tech text-slate-300 pt-1 border-t border-cyan-500/20">
+            6,000 synthetic rows · Threshold 0.35 · 5-Fold CV: 94.11% ± 0.58% · CV AUC: 0.9845 ± 0.0026
+          </div>
+        </div>
+
+        <!-- Right Honest Scope Disclosure -->
+        <div class="glass-card-gold rounded-2xl p-4 max-w-md">
+          <div class="flex items-center gap-2 mb-1.5">
+            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+            <span class="font-mono-tech text-[10px] uppercase tracking-widest text-amber-300 font-bold">HONEST SCOPE OF EVIDENCE</span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-100 leading-relaxed">
+            Data is <strong class="text-amber-300">synthetic</strong>, generated from published physiological ranges. It validates the closed-loop control architecture — <strong class="text-white">NOT biological efficacy</strong>. Benchmarking against real sensor readings is our first wet-lab step.
+          </p>
+        </div>
+      </div>
+
+      <!-- Lower-Third 4 Big Metrics -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+        <div class="glass-card-cyan rounded-xl px-4 py-3">
+          <div class="font-display text-3xl sm:text-4xl text-cyan-300 tracking-wide leading-none">94.4%</div>
+          <div class="text-[11px] text-slate-300 mt-1">Sensitivity (Attack Detected)</div>
+        </div>
+        <div class="glass-card rounded-xl px-4 py-3">
+          <div class="font-display text-3xl sm:text-4xl text-emerald-300 tracking-wide leading-none">93.7%</div>
+          <div class="text-[11px] text-slate-300 mt-1">Specificity (Quiet Preserved)</div>
+        </div>
+        <div class="glass-card rounded-xl px-4 py-3">
+          <div class="font-display text-3xl sm:text-4xl text-purple-300 tracking-wide leading-none">94.1%</div>
+          <div class="text-[11px] text-slate-300 mt-1">Held-Out Test Accuracy</div>
+        </div>
+        <div class="glass-card-cyan rounded-xl px-4 py-3">
+          <div class="font-display text-3xl sm:text-4xl text-white tracking-wide leading-none">0.985</div>
+          <div class="text-[11px] text-slate-300 mt-1">ROC-AUC Separation Score</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 09: INNOVATION & DIFFERENTIATION ==================== -->
+    <section class="slide-overlay" data-slide="8">
+      <div class="flex items-center justify-between">
+        <div class="glass-card rounded-full px-3.5 py-1.5">
+          <span class="font-mono-tech text-[10px] uppercase tracking-widest text-purple-300 font-bold">08 · INNOVATION &amp; COMPETITIVE DIFFERENTIATION</span>
+        </div>
+      </div>
+
+      <!-- Translucent Comparison Matrix + Clinical Proof Strip -->
+      <div class="space-y-3 max-w-4xl mx-auto w-full">
+        <div class="glass-card rounded-2xl overflow-hidden border-purple-400/35">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-purple-500/30 bg-slate-950/60">
+                <th class="py-3 px-4 text-[11px] font-mono-tech uppercase tracking-wider text-slate-300">Capability</th>
+                <th class="py-3 px-3 text-[11px] font-mono-tech uppercase tracking-wider text-slate-400 text-center">Pumps / CGM</th>
+                <th class="py-3 px-3 text-[11px] font-mono-tech uppercase tracking-wider text-slate-400 text-center">Islet Transplant</th>
+                <th class="py-3 px-4 text-[11px] font-mono-tech uppercase tracking-wider text-cyan-300 text-center bg-gradient-to-r from-purple-700/45 to-cyan-700/45 font-bold">EndoCore</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-purple-500/15 text-xs sm:text-sm">
+              <tr>
+                <td class="py-2.5 px-4 font-semibold text-white">Restores the body's own insulin</td>
+                <td class="py-2.5 px-3 text-center text-rose-400 font-bold">✕</td>
+                <td class="py-2.5 px-3 text-center text-emerald-400 font-bold">✓</td>
+                <td class="py-2.5 px-4 text-center text-cyan-300 font-extrabold text-base bg-cyan-500/10">✓</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-4 font-semibold text-white">No lifelong immunosuppression</td>
+                <td class="py-2.5 px-3 text-center text-emerald-400 font-bold">✓</td>
+                <td class="py-2.5 px-3 text-center text-rose-400 font-bold">✕</td>
+                <td class="py-2.5 px-4 text-center text-cyan-300 font-extrabold text-base bg-cyan-500/10">✓</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-4 font-semibold text-white">Acts before damage is done</td>
+                <td class="py-2.5 px-3 text-center text-rose-400 font-bold">✕</td>
+                <td class="py-2.5 px-3 text-center text-rose-400 font-bold">✕</td>
+                <td class="py-2.5 px-4 text-center text-cyan-300 font-extrabold text-base bg-cyan-500/10">✓</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-4 font-semibold text-white">Nothing external to wear</td>
+                <td class="py-2.5 px-3 text-center text-rose-400 font-bold">✕</td>
+                <td class="py-2.5 px-3 text-center text-emerald-400 font-bold">✓</td>
+                <td class="py-2.5 px-4 text-center text-cyan-300 font-extrabold text-base bg-cyan-500/10">✓</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="glass-card-cyan rounded-xl px-4 py-3 text-center">
+          <p class="text-xs sm:text-sm text-slate-100 leading-snug">
+            <strong class="text-cyan-300">Not speculative:</strong> Gene-edited beta cells survived in a human without immunosuppression (<span class="font-mono-tech text-purple-200">NEJM, 2025</span>). Stem-cell islets restored insulin (<span class="font-mono-tech text-purple-200">Cell, 2024</span>). EndoCore joins both and adds active local control.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 10: FEASIBILITY, SAFETY & REGULATORY ==================== -->
+    <section class="slide-overlay" data-slide="9">
+      <div class="flex items-center justify-between">
+        <div class="glass-card rounded-full px-3.5 py-1.5">
+          <span class="font-mono-tech text-[10px] uppercase tracking-widest text-cyan-300 font-bold">09 · FEASIBILITY, SAFETY &amp; REGULATORY PATHWAY</span>
+        </div>
+        <div class="glass-card rounded-full px-3 py-1 font-mono-tech text-[10px] text-amber-300">
+          CLASS III IMPLANTABLE COMBINATION PRODUCT
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-end">
+        <!-- Left: Regulatory & Standards -->
+        <div class="glass-card rounded-2xl p-4 sm:p-5 space-y-2.5">
+          <div class="font-mono-tech text-[10px] uppercase tracking-widest text-purple-300 font-bold">Regulatory Position &amp; Standards</div>
+          <ul class="space-y-1.5 text-xs sm:text-sm text-slate-200">
+            <li class="flex items-start gap-2"><span class="text-cyan-400 font-bold">•</span><span><strong class="text-white">Combination Class III:</strong> Device + Biologic (gene-edited cells) + Drug (IL-10/TGF-β) + Software (Edge-AI).</span></li>
+            <li class="flex items-start gap-2"><span class="text-cyan-400 font-bold">•</span><span><strong class="text-white">SFDA Pathway:</strong> Next milestone is an SFDA pre-submission consultation + IRB approval before any human cell work.</span></li>
+            <li class="flex items-start gap-2"><span class="text-cyan-400 font-bold">•</span><span><strong class="text-white">Readiness:</strong> Currently <strong class="text-amber-300 font-mono-tech">TRL 3–4</strong> (concept &amp; control logic validated in silico; nothing fabricated yet).</span></li>
+          </ul>
+          <div class="grid grid-cols-2 gap-1.5 pt-2 border-t border-purple-500/20 font-mono-tech text-[10px]">
+            <div class="bg-slate-950/75 rounded-lg px-2.5 py-1.5 border border-slate-800"><span class="text-cyan-300 font-bold">ISO 10993</span> · Biocompatibility</div>
+            <div class="bg-slate-950/75 rounded-lg px-2.5 py-1.5 border border-slate-800"><span class="text-purple-300 font-bold">IEC 62304</span> · Software Lifecycle</div>
+            <div class="bg-slate-950/75 rounded-lg px-2.5 py-1.5 border border-slate-800"><span class="text-amber-300 font-bold">ISO 14971</span> · Risk Management</div>
+            <div class="bg-slate-950/75 rounded-lg px-2.5 py-1.5 border border-slate-800"><span class="text-emerald-300 font-bold">Saudi PDPL</span> · Air-Gapped Privacy</div>
+          </div>
+        </div>
+
+        <!-- Right: 4 Key Risks & Mitigations -->
+        <div class="glass-card-cyan rounded-2xl p-4 sm:p-5 space-y-2">
+          <div class="font-mono-tech text-[10px] uppercase tracking-widest text-cyan-300 font-bold">4 Key Technical Risks &amp; Engineered Mitigations</div>
+          <div class="space-y-2 text-xs">
+            <div class="bg-slate-950/70 rounded-xl p-2.5 border border-slate-800 flex justify-between gap-2">
+              <span class="font-bold text-rose-300 shrink-0">Pericapsular Fibrosis</span>
+              <span class="text-slate-200 text-right">Zwitterionic hydrogel outer dome</span>
+            </div>
+            <div class="bg-slate-950/70 rounded-xl p-2.5 border border-slate-800 flex justify-between gap-2">
+              <span class="font-bold text-amber-300 shrink-0">Off-Target CRISPR</span>
+              <span class="text-slate-200 text-right">Ex-vivo WGS + FACS + &lt;30 nm containment</span>
+            </div>
+            <div class="bg-slate-950/70 rounded-xl p-2.5 border border-slate-800 flex justify-between gap-2">
+              <span class="font-bold text-purple-300 shrink-0">Peptide Degradation</span>
+              <span class="text-slate-200 text-right">Lyophilized reservoirs + impedance sensor</span>
+            </div>
+            <div class="bg-slate-950/70 rounded-xl p-2.5 border border-slate-800 flex justify-between gap-2">
+              <span class="font-bold text-emerald-300 shrink-0">Data Privacy</span>
+              <span class="text-slate-200 text-right">Zero Wi-Fi/BT transmitter (power-only coil)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 11: ADOPTION, BUSINESS MODEL & SAVINGS ==================== -->
+    <section class="slide-overlay" data-slide="10">
+      <div class="flex flex-col lg:flex-row justify-between items-start gap-4 mt-1">
+        <!-- Left: Market & Hospital Math -->
+        <div class="glass-card-gold rounded-2xl p-4 max-w-md space-y-2">
+          <div class="font-mono-tech text-[10px] uppercase tracking-widest text-amber-300 font-bold">10 · MARKET &amp; HOSPITAL PAYBACK ARITHMETIC</div>
+          <div class="grid grid-cols-3 gap-1.5 text-center font-mono-tech text-[10px]">
+            <div class="bg-slate-950/70 rounded-lg p-1.5 border border-amber-500/25">
+              <div class="text-amber-300 font-bold">TAM</div>
+              <div class="text-white font-extrabold">9.1M</div>
+              <div class="text-[9px] text-slate-400">Global T1D</div>
+            </div>
+            <div class="bg-slate-950/70 rounded-lg p-1.5 border border-amber-500/25">
+              <div class="text-amber-300 font-bold">SAM</div>
+              <div class="text-white font-extrabold">KSA/GCC</div>
+              <div class="text-[9px] text-slate-400">High Incidence</div>
+            </div>
+            <div class="bg-slate-950/70 rounded-lg p-1.5 border border-amber-500/25">
+              <div class="text-amber-300 font-bold">SOM</div>
+              <div class="text-white font-extrabold">100–250</div>
+              <div class="text-[9px] text-slate-400">KAU Registry</div>
+            </div>
+          </div>
+          <p class="text-xs text-slate-200 leading-relaxed">
+            Current pediatric care costs <strong class="text-rose-300">34,665 SAR/yr</strong> (<span class="font-mono-tech">173,325 SAR</span> over 5 yrs). EndoCore costs <strong class="text-emerald-300">24,300 SAR</strong> once + <span class="font-mono-tech">2,800 SAR</span> (5 refills) = <strong class="text-white font-mono-tech">27,100 SAR</strong> → <strong class="text-amber-300">146,225 SAR saved</strong> &amp; <strong class="text-cyan-300">8.4-month payback</strong>.
+          </p>
+        </div>
+
+        <!-- Right: Funding Path + BMC Button -->
+        <div class="glass-card rounded-2xl p-4 max-w-sm space-y-2.5">
+          <div class="font-mono-tech text-[10px] uppercase tracking-widest text-purple-300 font-bold">Funding &amp; Commercialization Path</div>
+          <div class="text-xs text-slate-200 space-y-1">
+            <div><strong class="text-cyan-300">Phase 1:</strong> Non-dilutive grants (Wadi Jeddah, RDIA, Monsha'at)</div>
+            <div><strong class="text-purple-300">Phase 2:</strong> B2B hospital procurement via MOH / NUPCO</div>
+            <div><strong class="text-emerald-300">Recurring:</strong> Annual transdermal refill patches (560 SAR)</div>
+          </div>
+          <button onclick="openBmcModal()" class="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500/85 to-purple-600/90 hover:brightness-110 text-white font-bold text-xs shadow-lg flex items-center justify-center gap-2 transition">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+            <span>View Full Business Model Canvas</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Lower-Third 4 Economics KPIs -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+        <div class="glass-card-gold rounded-xl px-4 py-3">
+          <div class="font-display text-3xl sm:text-4xl text-amber-300 tracking-wide leading-none">24,300 SAR</div>
+          <div class="text-[11px] text-slate-300 mt-1">B2B Hospital Implant ($6,500)</div>
+        </div>
+        <div class="glass-card rounded-xl px-4 py-3">
+          <div class="font-display text-3xl sm:text-4xl text-cyan-300 tracking-wide leading-none">560 SAR / YR</div>
+          <div class="text-[11px] text-slate-300 mt-1">Transdermal Refill Patch</div>
+        </div>
+        <div class="glass-card-gold rounded-xl px-4 py-3">
+          <div class="font-display text-3xl sm:text-4xl text-emerald-300 tracking-wide leading-none">~146K SAR</div>
+          <div class="text-[11px] text-slate-300 mt-1">Saved per child over 5 years</div>
+        </div>
+        <div class="glass-card rounded-xl px-4 py-3">
+          <div class="font-display text-3xl sm:text-4xl text-white tracking-wide leading-none">~$1,800</div>
+          <div class="text-[11px] text-slate-300 mt-1">Modeled Unit BOM at Scale</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 12: ROADMAP & TEAM READINESS ==================== -->
+    <section class="slide-overlay" data-slide="11">
+      <!-- Top 4-Stage 24-Month Roadmap -->
+      <div class="space-y-2">
+        <div class="glass-card rounded-full px-3.5 py-1 inline-block">
+          <span class="font-mono-tech text-[10px] uppercase tracking-widest text-cyan-300 font-bold">11 · 24-MONTH INCUBATION ROADMAP &amp; TEAM READINESS</span>
+        </div>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+          <div class="glass-card rounded-xl p-3 border-purple-400/40">
+            <div class="font-mono-tech text-[10px] text-purple-300 font-bold">NOW · TRL 3–4</div>
+            <div class="text-xs font-bold text-white mt-0.5">In-Silico MVP Validated</div>
+            <p class="text-[11px] text-slate-300 mt-1 leading-snug">3D digital twin &amp; cross-validated TinyML control logic.</p>
+          </div>
+          <div class="glass-card-cyan rounded-xl p-3">
+            <div class="font-mono-tech text-[10px] text-cyan-300 font-bold">MONTHS 1–6 · ~150K SAR</div>
+            <div class="text-xs font-bold text-white mt-0.5">KAU Wet-Lab Calibration</div>
+            <p class="text-[11px] text-slate-300 mt-1 leading-snug">Hydrogel stability &amp; 16-node electrochemical sensor calibration.</p>
+          </div>
+          <div class="glass-card rounded-xl p-3 border-emerald-400/35">
+            <div class="font-mono-tech text-[10px] text-emerald-300 font-bold">MONTHS 6–12 · ~225K SAR</div>
+            <div class="text-xs font-bold text-white mt-0.5">KAUST Microfluidics</div>
+            <p class="text-[11px] text-slate-300 mt-1 leading-snug">Benchtop dispenser &amp; AI re-benchmarking on REAL sensor data.</p>
+          </div>
+          <div class="glass-card-gold rounded-xl p-3">
+            <div class="font-mono-tech text-[10px] text-amber-300 font-bold">MONTHS 12–24 · ~375K SAR</div>
+            <div class="text-xs font-bold text-white mt-0.5">Co-Culture &amp; SFDA</div>
+            <p class="text-[11px] text-slate-300 mt-1 leading-snug">In-vitro CRISPR co-culture &amp; IRB / SFDA pre-submission alignment.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom 3 Team Cards + Honest Gaps Note -->
+      <div class="space-y-2">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+          <div class="glass-card rounded-xl p-3.5">
+            <div class="font-mono-tech text-[10px] text-purple-300 font-bold uppercase">Team Leader · Clinical &amp; AI Architecture</div>
+            <div class="text-sm font-extrabold text-white mt-0.5">Mariya Ghabashi</div>
+            <p class="text-[11px] text-slate-300 mt-1 leading-snug">Biohybrid architecture, CRISPR/immunology methodology, Edge-AI validation, wet-lab strategy.</p>
+          </div>
+          <div class="glass-card-cyan rounded-xl p-3.5">
+            <div class="font-mono-tech text-[10px] text-cyan-300 font-bold uppercase">3D Prototyping &amp; UX Design</div>
+            <div class="text-sm font-extrabold text-white mt-0.5">Atouf Ghabashi</div>
+            <p class="text-[11px] text-slate-300 mt-1 leading-snug">3D CAD nanochip modeling, WebGL digital twin, interactive telemetry UI.</p>
+          </div>
+          <div class="glass-card rounded-xl p-3.5 border-emerald-500/30">
+            <div class="font-mono-tech text-[10px] text-emerald-300 font-bold uppercase">Business Operations &amp; Market Research</div>
+            <div class="text-sm font-extrabold text-white mt-0.5">Ater Kakki</div>
+            <p class="text-[11px] text-slate-300 mt-1 leading-snug">Saudi health economics, supply-chain logistics, clinical translation &amp; regulatory liaison.</p>
+          </div>
+        </div>
+        <div class="glass-card rounded-xl px-4 py-2 text-center text-[11px] text-slate-300">
+          <strong class="text-amber-300">Capability gaps we are open about:</strong> MEMS/microfluidics engineering &amp; SFDA regulatory affairs — incubation is how we close them.
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SLIDE 13: THE ASK & Q&A ==================== -->
+    <section class="slide-overlay" data-slide="12">
+      <div class="flex items-center justify-between">
+        <div class="glass-card rounded-full px-3.5 py-1.5">
+          <span class="font-mono-tech text-[10px] uppercase tracking-widest text-purple-300 font-bold">12 · THE ASK &amp; Q&amp;A — MEDATHON 2026 FINALS</span>
+        </div>
+        <div class="glass-card-cyan rounded-full px-3.5 py-1.5 font-mono-tech text-[11px] text-cyan-300 font-bold">
+          7navy7.github.io/EndoCore-MVP
+        </div>
+      </div>
+
+      <!-- Lower-Third 3 Ask Cards + Closing Statement + Action Buttons -->
+      <div class="space-y-3">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="glass-card rounded-2xl p-4 border-purple-400/40">
+            <div class="font-mono-tech text-[10px] text-purple-300 font-bold">01 — INCUBATION</div>
+            <div class="font-display text-3xl text-white tracking-wide mt-0.5">WADI JEDDAH</div>
+            <p class="text-xs text-slate-300 mt-1">A seat with Wadi Jeddah to keep building and close our MEMS &amp; regulatory gaps.</p>
+          </div>
+          <div class="glass-card-cyan rounded-2xl p-4">
+            <div class="font-mono-tech text-[10px] text-cyan-300 font-bold">02 — LAB ACCESS</div>
+            <div class="font-display text-3xl text-cyan-300 tracking-wide mt-0.5">KAU &amp; KAUST</div>
+            <p class="text-xs text-slate-300 mt-1">KAU wet-lab for sensor calibration &amp; KAUST microfluidics testbed for benchtop dosing.</p>
+          </div>
+          <div class="glass-card-gold rounded-2xl p-4">
+            <div class="font-mono-tech text-[10px] text-amber-300 font-bold">03 — PRE-SEED R&amp;D</div>
+            <div class="font-display text-3xl text-amber-300 tracking-wide mt-0.5">750K SAR</div>
+            <p class="text-xs text-slate-300 mt-1">Over 24 months to reach in-vitro proof of concept (TRL 4).</p>
+          </div>
+        </div>
+
+        <div class="glass-card rounded-2xl px-5 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div>
+            <p class="text-sm sm:text-base font-bold text-white italic">
+              “We are not asking you to believe this is a finished device. We are asking for the room to prove it works.”
+            </p>
+            <p class="text-[11px] font-mono-tech text-purple-300 mt-0.5">Thank you · Open for Questions (AQYXBQ)</p>
+          </div>
+          <div class="flex items-center gap-2 shrink-0 interactive-el">
+            <button onclick="replayCinemaTour()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-purple-400/40 text-xs font-bold text-white transition">
+              Replay Cinema Tour
+            </button>
+            <button onclick="goToSlide(6)" class="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-500 hover:brightness-110 text-xs font-bold text-white shadow-lg transition">
+              Launch Sandbox
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- =========================================================================
+       BOTTOM CHAPTER TIMELINE BAR (Z-35)
+  ========================================================================= -->
+  <footer class="fixed bottom-0 left-0 right-0 h-[54px] z-35 bg-[#0d0517]/82 backdrop-blur-xl border-t border-purple-500/20 px-4 flex items-center justify-between gap-3">
+    <!-- Active Slide Title -->
+    <div class="flex items-center gap-2 min-w-0">
+      <span id="footerSlideTag" class="font-mono-tech text-[11px] text-cyan-300 font-bold shrink-0">01</span>
+      <span id="footerSlideTitle" class="text-xs font-semibold text-slate-200 truncate">EndoCore — Cover</span>
+    </div>
+
+    <!-- Clickable Chapter Dots -->
+    <div id="chapterDots" class="flex items-center gap-1.5 sm:gap-2"></div>
+
+    <!-- Navigation Hint -->
+    <div class="hidden md:flex items-center gap-1.5 font-mono-tech text-[10px] text-slate-400 shrink-0">
+      <span class="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-300">←</span>
+      <span class="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-300">→</span>
+      <span>/ Space / Scroll</span>
+    </div>
+  </footer>
+
+  <!-- =========================================================================
+       BUSINESS MODEL CANVAS GLASS MODAL (TRIGGERED FROM SLIDE 11)
+  ========================================================================= -->
+  <div id="bmcModal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-md hidden items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-5xl w-full max-h-[86vh] flex flex-col overflow-hidden border-amber-400/40">
+      <div class="px-5 py-3.5 border-b border-purple-500/25 flex items-center justify-between bg-slate-950/70">
+        <div>
+          <span class="font-mono-tech text-[10px] uppercase tracking-widest text-amber-300 font-bold">EndoCore · Strategic Overview</span>
+          <h3 class="text-base font-extrabold text-white">Full 9-Block Business Model Canvas</h3>
+        </div>
+        <button onclick="closeBmcModal()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition" title="Close Canvas">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-3 scrollable-panel text-xs">
+        <div class="bg-slate-950/75 rounded-xl p-3 border border-slate-800">
+          <div class="font-mono-tech text-[10px] text-cyan-300 font-bold uppercase mb-1">Key Partners</div>
+          <p class="text-slate-300 leading-relaxed">King Abdulaziz University (KAU) labs, KAUST core nanofabrication facilities, Saudi Health Council / SFDA regulatory bodies, and biotech suppliers for CRISPR/Cas9 reagents &amp; zwitterionic hydrogels.</p>
+        </div>
+        <div class="bg-slate-950/75 rounded-xl p-3 border border-slate-800">
+          <div class="font-mono-tech text-[10px] text-cyan-300 font-bold uppercase mb-1">Key Activities</div>
+          <p class="text-slate-300 leading-relaxed">In-vitro co-culture stress testing, CRISPR gene editing of universal hypoimmune beta cells (B2M/CIITA), and training Edge-AI models for real-time cytokine tracking.</p>
+        </div>
+        <div class="bg-slate-950/75 rounded-xl p-3 border border-slate-800">
+          <div class="font-mono-tech text-[10px] text-cyan-300 font-bold uppercase mb-1">Key Resources</div>
+          <p class="text-slate-300 leading-relaxed">Proprietary TinyML predictive algorithms, allogeneic CRISPR-modified stem-cell lines, ECM proteins (collagen/laminin), and zwitterionic hydrogel materials.</p>
+        </div>
+        <div class="bg-slate-950/75 rounded-xl p-3 border border-purple-500/35">
+          <div class="font-mono-tech text-[10px] text-purple-300 font-bold uppercase mb-1">Value Proposition</div>
+          <p class="text-slate-300 leading-relaxed">One-time implant replacing lifelong insulin/CGM consumables ($2.3K–$9.2K/yr). Unit BOM ~$1,800 at scale; B2B hospital price ~$6,500 (~24,300 SAR). ~8.4-month payback &amp; ~146K SAR saved over 5 years.</p>
+        </div>
+        <div class="bg-slate-950/75 rounded-xl p-3 border border-slate-800">
+          <div class="font-mono-tech text-[10px] text-emerald-300 font-bold uppercase mb-1">Customer Relationships</div>
+          <p class="text-slate-300 leading-relaxed">Long-term clinical oversight via specialized endocrinology networks: scheduled outpatient ultrasound checks + standard metabolic labs. Fully air-gapped (PDPL compliant; zero RF transmission).</p>
+        </div>
+        <div class="bg-slate-950/75 rounded-xl p-3 border border-slate-800">
+          <div class="font-mono-tech text-[10px] text-emerald-300 font-bold uppercase mb-1">Channels</div>
+          <p class="text-slate-300 leading-relaxed">Peer-reviewed academic publications, biotechnology symposiums, and institutional partnerships with national health networks (MOH / NUPCO).</p>
+        </div>
+        <div class="bg-slate-950/75 rounded-xl p-3 border border-slate-800">
+          <div class="font-mono-tech text-[10px] text-amber-300 font-bold uppercase mb-1">Customer Segments</div>
+          <p class="text-slate-300 leading-relaxed">Macro: Saudi MOH &amp; NUPCO. Beachhead (SOM): pediatric (&lt;15 yrs) &amp; brittle T1D patients at KAU and specialist transplant centers. First-in-human: 3–10 IRB patients → 100–250 patient registry.</p>
+        </div>
+        <div class="bg-slate-950/75 rounded-xl p-3 border border-slate-800">
+          <div class="font-mono-tech text-[10px] text-rose-300 font-bold uppercase mb-1">Cost Structure (24-Mo Pre-Seed)</div>
+          <p class="text-slate-300 leading-relaxed">~750K SAR (~$200K) to reach in-vitro proof (TRL 4): M1–6 (~150K SAR) hydrogel &amp; 16-sensor calibration · M6–12 (~225K SAR) PCB &amp; TinyML benchtop · M12–24 (~375K SAR) CRISPR co-culture &amp; SFDA/IP.</p>
+        </div>
+        <div class="bg-slate-950/75 rounded-xl p-3 border border-amber-500/35">
+          <div class="font-mono-tech text-[10px] text-amber-300 font-bold uppercase mb-1">Revenue Streams</div>
+          <p class="text-slate-300 leading-relaxed">Phase 1: Non-dilutive grants (Wadi Jeddah, RDIA, Monsha'at). Phase 2: B2B hospital procurement tenders (~$6.5K/unit). Recurring: transdermal peptide refill patches (~560 SAR every 6–12 months).</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       COMPLETE 3D WEBGL + CINEMATIC CAMERA + TRAINED TINYML ENGINE
+  ========================================================================= -->
+  <script>
+    // =========================================================================
+    // 1. EXACT TRAINED ENDOCORE TINYML LOGISTIC CLASSIFIER (FROM endocore_model.js)
+    // =========================================================================
+    const ENDOCORE_MODEL = {
+      model_type: "logistic_regression",
+      n_samples: 6000,
+      ph_reference: 7.4,
+      intercept: -5.028897670558377,
+      coefficients: {
+        il_6_pg_ml: 0.05924097580014023,
+        ifn_gamma_pg_ml: 0.05365978529962445,
+        ph_drop: 2.750982625896466,
+        cd8_tcell_count: 0.037538966338953796
+      },
+      decision_threshold: 0.35
+    };
+
+    // =========================================================================
+    // 2. SLIDE CHOREOGRAPHY: CAMERA KEYFRAMES, DEPTH TYPOGRAPHY & 3D BIOLOGICAL STATE
+    // =========================================================================
+    const SLIDES = [
+      {
+        label: "EndoCore — Cover",
+        kicker: "MEDATHON 2026 FINALS · AQYXBQ",
+        depthTitle: "ENDOCORE",
+        titleSize: "size-xl",
+        titleTone: "",
+        camPos: [0, 8.2, 30.5],
+        target: [0.5, 1.8, 0.2],
+        chipVisible: true,
+        exploded: 0,
+        tCells: 0,
+        exosomeIntensity: 0.0,
+        shieldOpacity: 0.05,
+        necrosis: 0.0,
+        tregRatio: 0.0,
+        antibodies: false,
+        interactiveOrbit: false
+      },
+      {
+        label: "The Problem",
+        kicker: "01 · AUTOIMMUNE DESTRUCTION",
+        depthTitle: "ATTACKED FROM WITHIN",
+        titleSize: "size-md",
+        titleTone: "tone-danger",
+        camPos: [2.4, -0.5, 13.8],
+        target: [1.2, -2.2, 0.6],
+        chipVisible: false,
+        exploded: 0,
+        tCells: 52,
+        exosomeIntensity: 0.0,
+        shieldOpacity: 0.0,
+        necrosis: 0.78,
+        tregRatio: 0.0,
+        antibodies: false,
+        interactiveOrbit: false
+      },
+      {
+        label: "Evidence of Need",
+        kicker: "02 · STAGE 1–2 BIOMARKERS & VOICES",
+        depthTitle: "CLINICAL & LIVED NEED",
+        titleSize: "size-md",
+        titleTone: "tone-gold",
+        camPos: [-6.8, 0.6, 15.8],
+        target: [0.2, -1.6, 1.4],
+        chipVisible: false,
+        exploded: 0,
+        tCells: 14,
+        exosomeIntensity: 0.0,
+        shieldOpacity: 0.0,
+        necrosis: 0.15,
+        tregRatio: 0.0,
+        antibodies: true,
+        interactiveOrbit: false
+      },
+      {
+        label: "Why Nothing Is a Cure",
+        kicker: "03 · CURRENT TREATMENT BOTTLENECK",
+        depthTitle: "THREE DIFFERENT WALLS",
+        titleSize: "size-md",
+        titleTone: "",
+        camPos: [-1.8, -4.6, 14.5],
+        target: [1.0, -1.5, 0.8],
+        chipVisible: true,
+        exploded: 0,
+        tCells: 24,
+        exosomeIntensity: 0.0,
+        shieldOpacity: 0.0,
+        necrosis: 0.35,
+        tregRatio: 0.0,
+        antibodies: false,
+        interactiveOrbit: false
+      },
+      {
+        label: "The Solution: EndoCore",
+        kicker: "04 · LOCALIZED IMMUNOMODULATION",
+        depthTitle: "PROTECT THE CELLS",
+        titleSize: "",
+        titleTone: "tone-cyan",
+        camPos: [3.2, 7.2, 21.0],
+        target: [0.6, 3.8, 0.2],
+        chipVisible: true,
+        exploded: 0,
+        tCells: 16,
+        exosomeIntensity: 0.65,
+        shieldOpacity: 0.16,
+        necrosis: 0.0,
+        tregRatio: 0.85,
+        antibodies: false,
+        interactiveOrbit: false
+      },
+      {
+        label: "5-Layer Architecture",
+        kicker: "05 · INTERACTIVE HARDWARE STACK",
+        depthTitle: "FIVE LAYER ARCHITECTURE",
+        titleSize: "size-md",
+        titleTone: "tone-cyan",
+        camPos: [0.5, 8.2, 18.8],
+        target: [0.5, 6.2, 0.2],
+        chipVisible: true,
+        exploded: 1,
+        tCells: 0,
+        exosomeIntensity: 0.0,
+        shieldOpacity: 0.0,
+        necrosis: 0.0,
+        tregRatio: 0.0,
+        antibodies: false,
+        interactiveOrbit: true
+      },
+      {
+        label: "Live Digital Twin",
+        kicker: "06 · INTERACTIVE TINYML SANDBOX",
+        depthTitle: "LIVE DIGITAL TWIN",
+        titleSize: "",
+        titleTone: "tone-cyan",
+        camPos: [0, 7.6, 28.0],
+        target: [0.6, 1.8, 0.2],
+        chipVisible: true,
+        exploded: 0,
+        tCells: 0,
+        exosomeIntensity: 0.0,
+        shieldOpacity: 0.0,
+        necrosis: 0.0,
+        tregRatio: 0.0,
+        antibodies: false,
+        interactiveOrbit: true,
+        isSandbox: true
+      },
+      {
+        label: "Performance & Validation",
+        kicker: "07 · 6,000 SYNTHETIC SAMPLES · 5-FOLD CV",
+        depthTitle: "VALIDATED IN SILICO",
+        titleSize: "",
+        titleTone: "tone-cyan",
+        camPos: [-10.5, 5.2, 18.5],
+        target: [0.5, 3.8, 0.2],
+        chipVisible: true,
+        exploded: 0.22,
+        tCells: 34,
+        exosomeIntensity: 0.92,
+        shieldOpacity: 0.18,
+        necrosis: 0.0,
+        tregRatio: 0.9,
+        antibodies: false,
+        interactiveOrbit: false
+      },
+      {
+        label: "Innovation & Differentiation",
+        kicker: "08 · PEER-REVIEWED CLINICAL GROUNDING",
+        depthTitle: "THE RIGHT COLUMN",
+        titleSize: "",
+        titleTone: "",
+        camPos: [1.5, -5.8, 22.0],
+        target: [0.8, 1.8, 0.4],
+        chipVisible: true,
+        exploded: 0,
+        tCells: 0,
+        exosomeIntensity: 0.25,
+        shieldOpacity: 0.08,
+        necrosis: 0.0,
+        tregRatio: 0.0,
+        antibodies: false,
+        interactiveOrbit: false
+      },
+      {
+        label: "Feasibility & Regulatory",
+        kicker: "09 · SFDA CLASS III · TRL 3–4",
+        depthTitle: "CLASS III PATHWAY",
+        titleSize: "",
+        titleTone: "",
+        camPos: [8.8, 3.2, 14.8],
+        target: [0.5, 5.6, 0.2],
+        chipVisible: true,
+        exploded: 0.42,
+        tCells: 0,
+        exosomeIntensity: 0.0,
+        shieldOpacity: 0.06,
+        necrosis: 0.0,
+        tregRatio: 0.0,
+        antibodies: false,
+        interactiveOrbit: false
+      },
+      {
+        label: "Economics & Payback",
+        kicker: "10 · KSA HOSPITAL HEALTH ECONOMICS",
+        depthTitle: "8.4 MONTH PAYBACK",
+        titleSize: "",
+        titleTone: "tone-gold",
+        camPos: [14.5, 8.0, 24.5],
+        target: [0.6, 1.6, 0.2],
+        chipVisible: true,
+        exploded: 0,
+        tCells: 0,
+        exosomeIntensity: 0.35,
+        shieldOpacity: 0.1,
+        necrosis: 0.0,
+        tregRatio: 0.0,
+        antibodies: false,
+        interactiveOrbit: false
+      },
+      {
+        label: "Roadmap & Team",
+        kicker: "11 · KAU WET-LAB → KAUST → SFDA",
+        depthTitle: "24 MONTHS TO PROOF",
+        titleSize: "size-md",
+        titleTone: "",
+        camPos: [-12.5, 4.2, 26.5],
+        target: [0.5, 1.8, 0.2],
+        chipVisible: true,
+        exploded: 0.15,
+        tCells: 0,
+        exosomeIntensity: 0.2,
+        shieldOpacity: 0.06,
+        necrosis: 0.0,
+        tregRatio: 0.0,
+        antibodies: false,
+        interactiveOrbit: false
+      },
+      {
+        label: "The Ask & Q&A",
+        kicker: "12 · WADI JEDDAH · KAU · KAUST · 750K SAR",
+        depthTitle: "THE ROOM TO PROVE IT",
+        titleSize: "size-md",
+        titleTone: "tone-cyan",
+        camPos: [0, 6.2, 34.0],
+        target: [0.6, 2.0, 0.2],
+        chipVisible: true,
+        exploded: 0,
+        tCells: 0,
+        exosomeIntensity: 0.45,
+        shieldOpacity: 0.12,
+        necrosis: 0.0,
+        tregRatio: 0.0,
+        antibodies: false,
+        interactiveOrbit: false
+      }
+    ];
+
+    const LAYER_DETAILS = {
+      0: {
+        tag: "ALL 5 LAYERS EXPLODED",
+        spec: "28 mm × 3.5 mm",
+        title: "Integrated 5-Layer Biohybrid Pod",
+        body: "Select any layer on the left — or click directly on the floating 3D discs in the center — to fly the camera right into its structure and examine its biological & hardware role.",
+        metric: "Status: Exploded stack live · Orbit 360° enabled",
+        camPos: [0.5, 8.2, 18.8],
+        target: [0.5, 6.2, 0.2]
+      },
+      1: {
+        tag: "LAYER 01 · OUTER BIO-SHIELD",
+        spec: "Anti-Fibrotic Dome",
+        title: "Zwitterionic Hydrogel Coat",
+        body: "Translucent 3D cross-linked zwitterionic polymer dome with balanced positive/negative charges holding a hydration barrier. Prevents protein fouling and fibrotic scar encapsulation while maximizing O₂ diffusion.",
+        metric: "Standard: ISO 10993 Biocompatibility Target",
+        camPos: [0.5, 11.4, 11.5],
+        target: [0.5, 10.4, 0.2]
+      },
+      2: {
+        tag: "LAYER 02 · HYPOIMMUNE CORE",
+        spec: "<30 nm Pores",
+        title: "Nanoporous Membrane & CRISPR β-Cells",
+        body: "Precision <30 nm teal nanoporous filter housing CRISPR/Cas9 B2M & CIITA knockout beta-cell organoids in collagen ECM. Allows glucose, oxygen, and insulin to diffuse freely while blocking T-cells (~10,000 nm).",
+        metric: "Safety: Ex-vivo WGS + FACS + Physical Containment",
+        camPos: [0.5, 9.2, 11.5],
+        target: [0.5, 8.3, 0.2]
+      },
+      3: {
+        tag: "LAYER 03 · INTERSTITIAL SENSING",
+        spec: "16× Gold Electrodes",
+        title: "Electrochemical Nano-Sensors",
+        body: "16 gold aptamer-functionalized spherical electrodes arrayed around the titanium perimeter ring. Continuously tracks local IL-6, IFN-γ cytokine spikes, interstitial pH acidosis, and early autoantibodies.",
+        metric: "Wet-Lab Phase 1: KAU Calibration in Simulated ISF",
+        camPos: [0.5, 7.0, 11.5],
+        target: [0.5, 6.2, 0.2]
+      },
+      4: {
+        tag: "LAYER 04 · ON-DEVICE BRAIN",
+        spec: "<50 ms · 18 µW",
+        title: "TinyML Edge-AI Processor",
+        body: "Ultra-low-power CMOS silicon core running a deterministic 4-feature logistic classifier. Requires only 4 multiply-adds and 1 exponential — auditable, air-gapped (zero RF/Wi-Fi), and PDPL compliant by architecture.",
+        metric: "Validation: 94.4% Sens · 93.7% Spec · 0.985 AUC",
+        camPos: [0.5, 4.8, 11.5],
+        target: [0.5, 4.1, 0.2]
+      },
+      5: {
+        tag: "LAYER 05 · PEPTIDE ARMORY & POWER",
+        spec: "Dual 50 µL + Coils",
+        title: "Peptide Reservoirs & Inductive Power Coil",
+        body: "Dual hermetically sealed chambers holding 500 µg freeze-dried IL-10 & TGF-β with piezoelectric micro-valves (25 nL doses) and capacitive impedance sensing, over a 3-ring copper power-only coil & glucose biofuel generator.",
+        metric: "Refill: Painless Transdermal Patch every 6–12 mo",
+        camPos: [0.5, 2.2, 12.2],
+        target: [0.5, 2.0, 0.2]
+      }
+    };
+
+    // =========================================================================
+    // 3. THREE.JS SCENE & FULL ENDOCORE 3D BIOHYBRID MICROENVIRONMENT
+    // =========================================================================
+    const webglContainer = document.getElementById('layer-webgl');
+    const scene = new THREE.Scene();
+
+    const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 14, 44); // Sweeps smoothly into Slide 01 on load!
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0); // Strictly transparent so Layer 1 Depth Typography shines behind 3D!
+    webglContainer.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.minDistance = 7;
+    controls.maxDistance = 58;
+    controls.enablePan = false;
+    controls.target.set(0.5, 1.8, 0.2);
+    controls.enabled = false;
+
+    // Studio & Biological Lighting
+    scene.add(new THREE.AmbientLight(0xf5d0fe, 0.88));
+
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.3);
+    keyLight.position.set(14, 28, 22);
+    scene.add(keyLight);
+
+    const softPinkLight = new THREE.PointLight(0xf472b6, 1.45, 55);
+    softPinkLight.position.set(2, -1, 6);
+    scene.add(softPinkLight);
+
+    const rimLight = new THREE.PointLight(0xc084fc, 1.15, 65);
+    rimLight.position.set(-16, 10, -12);
+    scene.add(rimLight);
+
+    const goldAccentLight = new THREE.PointLight(0xfacc15, 0.55, 45);
+    goldAccentLight.position.set(12, 8, 10);
+    scene.add(goldAccentLight);
+
+    const shieldLight = new THREE.PointLight(0x22d3ee, 0, 50);
+    shieldLight.position.set(0.5, 6.2, 0.2);
+    scene.add(shieldLight);
+
+    // --- A. Undulating Translucent Plum Tissue Floor & Embracing Coral-Red Capillaries ---
+    const tissueGroup = new THREE.Group();
+    scene.add(tissueGroup);
+
+    const waveGeo = new THREE.PlaneGeometry(115, 75, 56, 56);
+    const wavePos = waveGeo.attributes.position;
+    for (let i = 0; i < wavePos.count; i++) {
+      const vx = wavePos.getX(i);
+      const vy = wavePos.getY(i);
+      wavePos.setZ(i, Math.sin(vx * 0.09) * 1.4 + Math.cos(vy * 0.12) * 1.2);
+    }
+    waveGeo.computeVertexNormals();
+    const waveFloor = new THREE.Mesh(
+      waveGeo,
+      new THREE.MeshPhysicalMaterial({
+        color: 0x2c123d,
+        emissive: 0x160721,
+        roughness: 0.78,
+        metalness: 0.05,
+        transparent: true,
+        opacity: 0.42,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      })
+    );
+    waveFloor.rotation.x = -Math.PI / 2.35;
+    waveFloor.position.set(0, -7.2, -6);
+    tissueGroup.add(waveFloor);
+
+    const capillaryMat = new THREE.MeshPhysicalMaterial({
+      color: 0xe14b56,
+      emissive: 0x581018,
+      emissiveIntensity: 0.36,
+      roughness: 0.26,
+      metalness: 0.06,
+      clearcoat: 0.7,
+      side: THREE.DoubleSide
+    });
+
+    function createCapillary(points, radius) {
+      const curve = new THREE.CatmullRomCurve3(points);
+      const mesh = new THREE.Mesh(new THREE.TubeGeometry(curve, 72, radius, 22, false), capillaryMat);
+      tissueGroup.add(mesh);
+      return mesh;
+    }
+
+    createCapillary([
+      new THREE.Vector3(-8.5, -2.3, 1.8),
+      new THREE.Vector3(-4.2, -0.9, 0.2),
+      new THREE.Vector3(1.2, -1.3, 0.5),
+      new THREE.Vector3(6.2, -3.3, 1.8),
+      new THREE.Vector3(10.5, -5.7, 3.0)
+    ], 0.78);
+
+    createCapillary([
+      new THREE.Vector3(-7.6, -3.6, 3.4),
+      new THREE.Vector3(-3.2, -4.6, 3.9),
+      new THREE.Vector3(1.8, -4.2, 3.2),
+      new THREE.Vector3(6.4, -2.1, 0.2),
+      new THREE.Vector3(8.5, -0.6, -1.8)
+    ], 0.76);
+
+    // --- B. 360° Glassy Islets of Langerhans (84 Beta Cells + 28 Inner Sparkles + 65 Insulin Droplets) ---
+    const isletGroup = new THREE.Group();
+    isletGroup.position.set(1.2, -2.2, 0.6);
+    scene.add(isletGroup);
+
+    const betaCells = [];
+    const healthyBetaColors = [0xe879f9, 0xc084fc, 0xa855f7, 0xf472b6, 0xddd6fe, 0x9333ea];
+    const shellConfigs = [
+      { count: 14, radius: 1.5 },
+      { count: 28, radius: 2.85 },
+      { count: 42, radius: 4.15 }
+    ];
+
+    shellConfigs.forEach((shell, shellIdx) => {
+      for (let i = 0; i < shell.count; i++) {
+        const phi = Math.acos(1 - (2 * (i + 0.5)) / shell.count);
+        const theta = Math.PI * (1 + Math.sqrt(5)) * i;
+        const r = shell.radius + (((i * 7 + shellIdx * 13) % 10) / 10 - 0.5) * 0.55;
+        const x = r * Math.sin(phi) * Math.cos(theta) * 1.12;
+        const y = r * Math.cos(phi) * 0.85;
+        const z = r * Math.sin(phi) * Math.sin(theta) * 0.95;
+
+        const baseColor = healthyBetaColors[(i + shellIdx) % healthyBetaColors.length];
+        const cellMat = new THREE.MeshPhysicalMaterial({
+          color: baseColor,
+          emissive: baseColor,
+          emissiveIntensity: 0.2,
+          transparent: true,
+          opacity: 0.76,
+          roughness: 0.12,
+          metalness: 0.02,
+          clearcoat: 1.0,
+          clearcoatRoughness: 0.08
+        });
+
+        const cellSize = 0.80 + (((i * 11) % 7) / 7) * 0.26;
+        const cellMesh = new THREE.Mesh(new THREE.SphereGeometry(cellSize, 22, 22), cellMat);
+        cellMesh.position.set(x, y, z);
+        cellMesh.userData = {
+          baseColor: new THREE.Color(baseColor),
+          necroticColor: new THREE.Color(0x475569),
+          necroticEmissive: new THREE.Color(0x0f172a),
+          baseScale: cellMesh.scale.clone(),
+          pulseOffset: (i * 0.65) % (Math.PI * 2)
+        };
+        isletGroup.add(cellMesh);
+        betaCells.push(cellMesh);
+      }
+    });
+
+    // 28 Glowing White Inner Sparkles
+    const isletSparkleGroup = new THREE.Group();
+    isletGroup.add(isletSparkleGroup);
+    const sparkleGeo = new THREE.SphereGeometry(0.13, 10, 10);
+    const sparkleMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.92 });
+    for (let i = 0; i < 28; i++) {
+      const sp = new THREE.Mesh(sparkleGeo, sparkleMat);
+      const phi = Math.acos(1 - (2 * (i + 0.5)) / 28);
+      const theta = Math.PI * (1 + Math.sqrt(5)) * i;
+      const rad = 1.4 + (i % 5) * 0.55;
+      sp.position.set(rad * Math.sin(phi) * Math.cos(theta), rad * Math.cos(phi) * 0.8, rad * Math.sin(phi) * Math.sin(theta));
+      isletSparkleGroup.add(sp);
+    }
+
+    // 65 Glowing Lavender Insulin Secretion Droplets
+    const insulinGroup = new THREE.Group();
+    isletGroup.add(insulinGroup);
+    const insulinParticles = [];
+    const insGeo = new THREE.SphereGeometry(0.14, 10, 10);
+    const insMat = new THREE.MeshBasicMaterial({ color: 0xf5d0fe, transparent: true, opacity: 0.92 });
+    for (let i = 0; i < 65; i++) {
+      const mesh = new THREE.Mesh(insGeo, insMat);
+      const phi = Math.acos(1 - (2 * (i + 0.5)) / 65);
+      const theta = Math.PI * (1 + Math.sqrt(5)) * i;
+      const dir = new THREE.Vector3(Math.sin(phi) * Math.cos(theta), Math.cos(phi) * 0.65, Math.sin(phi) * Math.sin(theta)).normalize();
+      mesh.userData = {
+        progress: (i / 65),
+        dir,
+        maxRadius: 2.3 + (i % 6) * 0.45,
+        speed: 0.0038 + (i % 5) * 0.0008
+      };
+      insulinGroup.add(mesh);
+      insulinParticles.push(mesh);
+    }
+
+    // --- C. 5-LAYER ENDOCORE BIOHYBRID NANOCHIP (y = 6.2) ---
+    const nanochipGroup = new THREE.Group();
+    nanochipGroup.position.set(0.5, 6.2, 0.2);
+    scene.add(nanochipGroup);
+
+    const chipLayers = [];
+
+    // Layer 1: Zwitterionic Hydrogel Outer Dome
+    const layer1Group = new THREE.Group();
+    const l1Mesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(4.35, 4.5, 0.72, 48),
+      new THREE.MeshPhysicalMaterial({
+        color: 0xcbd5e1,
+        emissive: 0x38bdf8,
+        emissiveIntensity: 0.14,
+        transparent: true,
+        opacity: 0.38,
+        roughness: 0.08,
+        metalness: 0.1,
+        clearcoat: 1.0
+      })
+    );
+    l1Mesh.userData = { layerId: 1 };
+    layer1Group.add(l1Mesh);
+    layer1Group.userData = { baseY: 0.72, explodeY: 4.2, layerId: 1 };
+    nanochipGroup.add(layer1Group);
+    chipLayers.push(layer1Group);
+
+    // Layer 2: Teal Nanoporous Membrane + 14 CRISPR Beta-Cell Spheres
+    const layer2Group = new THREE.Group();
+    const l2Disc = new THREE.Mesh(
+      new THREE.CylinderGeometry(4.15, 4.15, 0.26, 48),
+      new THREE.MeshPhysicalMaterial({
+        color: 0x14b8a6,
+        emissive: 0x0d9488,
+        emissiveIntensity: 0.34,
+        roughness: 0.2,
+        metalness: 0.15,
+        transparent: true,
+        opacity: 0.88
+      })
+    );
+    l2Disc.userData = { layerId: 2 };
+    layer2Group.add(l2Disc);
+
+    const innerBeadGeo = new THREE.SphereGeometry(0.24, 16, 16);
+    const innerBeadMat = new THREE.MeshPhysicalMaterial({
+      color: 0xe9d5ff,
+      emissive: 0xc084fc,
+      emissiveIntensity: 0.38,
+      roughness: 0.14,
+      clearcoat: 1.0
+    });
+    for (let i = 0; i < 14; i++) {
+      const a = (i / 14) * Math.PI * 2;
+      const bead = new THREE.Mesh(innerBeadGeo, innerBeadMat);
+      bead.position.set(Math.cos(a) * 2.65, 0.18, Math.sin(a) * 2.65);
+      bead.userData = { layerId: 2 };
+      layer2Group.add(bead);
+    }
+    layer2Group.userData = { baseY: 0.32, explodeY: 2.1, layerId: 2 };
+    nanochipGroup.add(layer2Group);
+    chipLayers.push(layer2Group);
+
+    // Layer 3: Metallic Rim + 16 Bright Gold Electrochemical Sensor Beads
+    const layer3Group = new THREE.Group();
+    const l3Rim = new THREE.Mesh(
+      new THREE.TorusGeometry(4.38, 0.22, 16, 64),
+      new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.85, roughness: 0.22 })
+    );
+    l3Rim.rotation.x = Math.PI / 2;
+    l3Rim.userData = { layerId: 3 };
+    layer3Group.add(l3Rim);
+
+    const goldBeadGeo = new THREE.SphereGeometry(0.25, 16, 16);
+    const goldBeadMat = new THREE.MeshStandardMaterial({
+      color: 0xfacc15,
+      emissive: 0xca8a04,
+      emissiveIntensity: 0.48,
+      metalness: 0.9,
+      roughness: 0.15
+    });
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      const gb = new THREE.Mesh(goldBeadGeo, goldBeadMat);
+      gb.position.set(Math.cos(a) * 4.52, 0, Math.sin(a) * 4.52);
+      gb.userData = { layerId: 3 };
+      layer3Group.add(gb);
+    }
+    layer3Group.userData = { baseY: 0.08, explodeY: 0.0, layerId: 3 };
+    nanochipGroup.add(layer3Group);
+    chipLayers.push(layer3Group);
+
+    // Layer 4: Dark Silicon PCB + Glowing Cyan TinyML Edge-AI Processor Die
+    const layer4Group = new THREE.Group();
+    const l4Pcb = new THREE.Mesh(
+      new THREE.CylinderGeometry(4.25, 4.05, 0.32, 48),
+      new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.25 })
+    );
+    l4Pcb.userData = { layerId: 4 };
+    layer4Group.add(l4Pcb);
+
+    const aiDieMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(2.6, 0.38, 2.6),
+      new THREE.MeshStandardMaterial({
+        color: 0x0f172a,
+        emissive: 0x38bdf8,
+        emissiveIntensity: 0.55,
+        metalness: 0.9,
+        roughness: 0.15
+      })
+    );
+    aiDieMesh.userData = { layerId: 4 };
+    layer4Group.add(aiDieMesh);
+    layer4Group.userData = { baseY: -0.22, explodeY: -2.1, layerId: 4 };
+    nanochipGroup.add(layer4Group);
+    chipLayers.push(layer4Group);
+
+    // Layer 5: Beveled Dark Base + Dual IL-10/TGF-β Reservoirs + 3 Copper Coils + Biofuel Hub
+    const layer5Group = new THREE.Group();
+    const l5Base = new THREE.Mesh(
+      new THREE.CylinderGeometry(4.15, 3.25, 0.52, 48),
+      new THREE.MeshStandardMaterial({ color: 0x1e1b2e, metalness: 0.85, roughness: 0.25 })
+    );
+    l5Base.userData = { layerId: 5 };
+    layer5Group.add(l5Base);
+
+    const resGeo = new THREE.CylinderGeometry(1.25, 1.25, 0.58, 24);
+    const resA = new THREE.Mesh(
+      resGeo,
+      new THREE.MeshPhysicalMaterial({ color: 0x06b6d4, emissive: 0x0891b2, emissiveIntensity: 0.55, transparent: true, opacity: 0.92 })
+    );
+    resA.position.set(-1.5, 0.05, 0);
+    resA.userData = { layerId: 5 };
+
+    const resB = new THREE.Mesh(
+      resGeo,
+      new THREE.MeshPhysicalMaterial({ color: 0x10b981, emissive: 0x059669, emissiveIntensity: 0.55, transparent: true, opacity: 0.92 })
+    );
+    resB.position.set(1.5, 0.05, 0);
+    resB.userData = { layerId: 5 };
+    layer5Group.add(resA, resB);
+
+    const coilMat = new THREE.MeshStandardMaterial({
+      color: 0xf59e0b,
+      emissive: 0xd97706,
+      emissiveIntensity: 0.58,
+      metalness: 0.92,
+      roughness: 0.15
+    });
+    [1.65, 2.35, 3.05].forEach(radius => {
+      const coil = new THREE.Mesh(new THREE.TorusGeometry(radius, 0.085, 14, 48), coilMat);
+      coil.rotation.x = Math.PI / 2;
+      coil.position.y = -0.32;
+      coil.userData = { layerId: 5 };
+      layer5Group.add(coil);
+    });
+
+    const biofuelHub = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.15, 0.85, 0.28, 32),
+      new THREE.MeshPhysicalMaterial({
+        color: 0x38bdf8,
+        emissive: 0x0284c7,
+        emissiveIntensity: 0.68,
+        roughness: 0.15,
+        metalness: 0.3,
+        clearcoat: 1.0
+      })
+    );
+    biofuelHub.position.y = -0.38;
+    biofuelHub.userData = { layerId: 5 };
+    layer5Group.add(biofuelHub);
+
+    layer5Group.userData = { baseY: -0.62, explodeY: -4.2, layerId: 5 };
+    nanochipGroup.add(layer5Group);
+    chipLayers.push(layer5Group);
+
+    // Wireframe Cyan Immunomodulation Shield Dome
+    const shieldMat = new THREE.MeshBasicMaterial({
+      color: 0x22d3ee,
+      transparent: true,
+      opacity: 0.0,
+      wireframe: true
+    });
+    const shieldDome = new THREE.Mesh(new THREE.SphereGeometry(10.6, 32, 32), shieldMat);
+    shieldDome.position.set(0.8, 1.8, 0.2);
+    scene.add(shieldDome);
+
+    // --- D. IMMUNE CELLS: 5 WHITE SPIKY APCs & 60 SPIKY CD8+ T-CELLS ---
+    const immuneGroup = new THREE.Group();
+    scene.add(immuneGroup);
+
+    const apcCells = [];
+    function createWhiteAPC(pos, scale = 1.0) {
+      const group = new THREE.Group();
+      const mat = new THREE.MeshPhysicalMaterial({
+        color: 0xe2e8f0,
+        emissive: 0x334155,
+        emissiveIntensity: 0.2,
+        roughness: 0.32,
+        metalness: 0.08,
+        clearcoat: 0.5
+      });
+      group.add(new THREE.Mesh(new THREE.SphereGeometry(0.95, 20, 20), mat));
+      const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+      const spikeGeo = new THREE.ConeGeometry(0.15, 0.82, 8);
+      for (let i = 0; i < 16; i++) {
+        const y = 1 - (i / 15) * 2;
+        const r = Math.sqrt(1 - y * y);
+        const theta = goldenAngle * i;
+        const dir = new THREE.Vector3(Math.cos(theta) * r, y, Math.sin(theta) * r).normalize();
+        const spike = new THREE.Mesh(spikeGeo, mat);
+        spike.position.copy(dir.clone().multiplyScalar(1.12));
+        spike.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+        group.add(spike);
+      }
+      group.scale.setScalar(scale);
+      group.position.copy(pos);
+      group.userData = { basePos: pos.clone(), offset: Math.random() * Math.PI * 2 };
+      immuneGroup.add(group);
+      apcCells.push(group);
+    }
+
+    createWhiteAPC(new THREE.Vector3(-7.4, 0.2, 1.5), 1.05);
+    createWhiteAPC(new THREE.Vector3(-6.2, -4.6, 3.2), 1.08);
+    createWhiteAPC(new THREE.Vector3(6.8, -5.5, 2.6), 1.02);
+    createWhiteAPC(new THREE.Vector3(7.4, 0.7, -2.5), 0.92);
+    createWhiteAPC(new THREE.Vector3(-0.8, 0.8, -3.2), 0.88);
+
+    // 60 Spiky Green CD8+ T-Cells (Converting to Cyan FoxP3+ Tregs under Shield)
+    const tCells = [];
+    const MAX_TCELLS = 60;
+    const tCellBodyGeo = new THREE.IcosahedronGeometry(0.65, 2);
+    const tCellSpikeGeo = new THREE.ConeGeometry(0.10, 0.52, 6);
+
+    function createSpikyTCell(idx) {
+      const group = new THREE.Group();
+      const bodyMat = new THREE.MeshPhysicalMaterial({
+        color: 0x22c55e,
+        emissive: 0x14532d,
+        emissiveIntensity: 0.38,
+        roughness: 0.35,
+        metalness: 0.1
+      });
+      group.add(new THREE.Mesh(tCellBodyGeo, bodyMat));
+
+      const posAttr = tCellBodyGeo.attributes.position;
+      const usedDirs = [];
+      for (let i = 0; i < posAttr.count; i += 3) {
+        const v = new THREE.Vector3().fromBufferAttribute(posAttr, i).normalize();
+        if (!usedDirs.some(d => d.distanceTo(v) < 0.55)) {
+          usedDirs.push(v);
+          const spike = new THREE.Mesh(tCellSpikeGeo, bodyMat);
+          spike.position.copy(v.clone().multiplyScalar(0.75));
+          spike.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), v);
+          group.add(spike);
+        }
+      }
+
+      const angle = (idx / MAX_TCELLS) * Math.PI * 2 + (idx % 3) * 0.4;
+      const baseRadius = 11.2 + (idx % 7) * 0.9;
+      const height = -4.2 + ((idx * 17) % 10) * 0.78;
+      group.position.set(Math.cos(angle) * baseRadius, height, Math.sin(angle) * baseRadius);
+      group.visible = false;
+      group.userData = {
+        bodyMat,
+        angle,
+        baseRadius,
+        height,
+        speed: 0.32 + (idx % 5) * 0.08,
+        isTreg: false
+      };
+      return group;
+    }
+
+    for (let i = 0; i < MAX_TCELLS; i++) {
+      const tc = createSpikyTCell(i);
+      immuneGroup.add(tc);
+      tCells.push(tc);
+    }
+
+    // --- E. STAGE 1–2 Y-SHAPED AUTOANTIBODIES WITH RING TIPS ---
+    const antibodyGroup = new THREE.Group();
+    antibodyGroup.visible = false;
+    scene.add(antibodyGroup);
+
+    function createRingTipAntibody(colorHex, emissiveHex, scale = 1.0) {
+      const yGroup = new THREE.Group();
+      const mat = new THREE.MeshPhysicalMaterial({
+        color: colorHex,
+        emissive: emissiveHex,
+        emissiveIntensity: 0.32,
+        roughness: 0.24,
+        metalness: 0.12,
+        clearcoat: 0.85
+      });
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 1.15, 14), mat);
+      stem.position.y = -0.35;
+      yGroup.add(stem);
+
+      const armL = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.92, 14), mat);
+      armL.position.set(-0.36, 0.42, 0);
+      armL.rotation.z = Math.PI / 5.2;
+      yGroup.add(armL);
+
+      const ringL = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.072, 10, 20), mat);
+      ringL.position.set(-0.66, 0.85, 0);
+      yGroup.add(ringL);
+
+      const armR = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.92, 14), mat);
+      armR.position.set(0.36, 0.42, 0);
+      armR.rotation.z = -Math.PI / 5.2;
+      yGroup.add(armR);
+
+      const ringR = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.072, 10, 20), mat);
+      ringR.position.set(0.66, 0.85, 0);
+      yGroup.add(ringR);
+
+      yGroup.scale.setScalar(scale);
+      return yGroup;
+    }
+
+    const heroAbData = [
+      { color: 0xeab308, emissive: 0x854d0e, pos: [-0.6, -0.4, 4.0], scale: 0.95 },
+      { color: 0xf4a2c8, emissive: 0x831843, pos: [-5.1, 0.4, 2.4], scale: 0.95 },
+      { color: 0xc084fc, emissive: 0x581c87, pos: [-2.3, 0.35, 3.0], scale: 0.92 },
+      { color: 0xd97706, emissive: 0x78350f, pos: [3.6, 0.1, 3.5], scale: 0.90 }
+    ];
+    const heroAbs = heroAbData.map(d => {
+      const ab = createRingTipAntibody(d.color, d.emissive, d.scale);
+      ab.position.set(...d.pos);
+      ab.userData = { baseY: d.pos[1] };
+      antibodyGroup.add(ab);
+      return ab;
+    });
+
+    const orbitingAbs = [];
+    const abPalette = [
+      [0xfef08a, 0xeab308],
+      [0xf472b6, 0x9d174d],
+      [0xc084fc, 0x6b21a8],
+      [0xf59e0b, 0x92400e]
+    ];
+    for (let i = 0; i < 14; i++) {
+      const [col, em] = abPalette[i % 4];
+      const ab = createRingTipAntibody(col, em, 0.56);
+      const angle = (i / 14) * Math.PI * 2;
+      const rad = 5.8 + (i % 4) * 1.15;
+      ab.position.set(Math.cos(angle) * rad, -2.0 + (i % 4) * 1.25, Math.sin(angle) * rad);
+      ab.userData = { angle, rad, speed: 0.35 + (i % 4) * 0.08 };
+      antibodyGroup.add(ab);
+      orbitingAbs.push(ab);
+    }
+
+    // --- F. 95 CYAN/EMERALD EXOSOME VESICLES STREAMING FROM LAYER 5 ---
+    const exosomeGroup = new THREE.Group();
+    scene.add(exosomeGroup);
+    const exosomes = [];
+    const exoGeo = new THREE.SphereGeometry(0.15, 10, 10);
+    for (let i = 0; i < 95; i++) {
+      const isIL10 = i % 2 === 0;
+      const mesh = new THREE.Mesh(
+        exoGeo,
+        new THREE.MeshBasicMaterial({ color: isIL10 ? 0x22d3ee : 0x34d399, transparent: true, opacity: 0.92 })
+      );
+      mesh.visible = false;
+      mesh.userData = {
+        progress: (i / 95),
+        angle: (i * 2.39996) % (Math.PI * 2),
+        spread: 3.4 + (i % 7) * 0.95,
+        speed: 0.0075 + (i % 5) * 0.0014
+      };
+      exosomeGroup.add(mesh);
+      exosomes.push(mesh);
+    }
+
+    // Ambient Floating Micro-Dust Particles in 3D Space
+    const dustCount = 220;
+    const dustGeo = new THREE.BufferGeometry();
+    const dustPositions = new Float32Array(dustCount * 3);
+    for (let i = 0; i < dustCount; i++) {
+      dustPositions[i * 3] = (Math.random() - 0.5) * 60;
+      dustPositions[i * 3 + 1] = (Math.random() - 0.5) * 38;
+      dustPositions[i * 3 + 2] = (Math.random() - 0.5) * 45;
+    }
+    dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+    const dustPoints = new THREE.Points(
+      dustGeo,
+      new THREE.PointsMaterial({ color: 0xd8b4fe, size: 0.14, transparent: true, opacity: 0.45 })
+    );
+    scene.add(dustPoints);
+
+    // =========================================================================
+    // 4. CINEMATIC CONTINUOUS CAMERA FLIGHT & STATE CONTROLLER
+    // =========================================================================
+    let currentSlideIdx = 0;
+    let activeLayerFocus = 0;
+
+    // Flight Interpolation State
+    const flight = {
+      active: false,
+      startTime: 0,
+      duration: 1350,
+      fromPos: new THREE.Vector3(),
+      toPos: new THREE.Vector3(),
+      fromTarget: new THREE.Vector3(),
+      toTarget: new THREE.Vector3()
+    };
+
+    // Smoothly lerped scene visual parameters
+    const sceneTarget = {
+      exploded: 0,
+      tCells: 0,
+      exosomeIntensity: 0,
+      shieldOpacity: 0.05,
+      necrosis: 0,
+      tregRatio: 0,
+      chipVisible: true,
+      antibodies: false
+    };
+
+    const sceneLive = {
+      exploded: 0,
+      shieldOpacity: 0.05,
+      necrosis: 0
+    };
+
+    // Mouse Parallax State
+    const mouseParallax = { x: 0, y: 0, smoothX: 0, smoothY: 0 };
+    window.addEventListener('mousemove', (e) => {
+      mouseParallax.x = (e.clientX / window.innerWidth - 0.5) * 2;
+      mouseParallax.y = (e.clientY / window.innerHeight - 0.5) * 2;
+    });
+
+    function easeInOutCubic(t) {
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    function launchCameraFlight(toPosArr, toTargetArr, durationMs = 1350) {
+      flight.active = true;
+      flight.startTime = performance.now();
+      flight.duration = durationMs;
+      flight.fromPos.copy(camera.position);
+      flight.toPos.set(toPosArr[0], toPosArr[1], toPosArr[2]);
+      flight.fromTarget.copy(controls.target);
+      flight.toTarget.set(toTargetArr[0], toTargetArr[1], toTargetArr[2]);
+
+      const warp = document.getElementById('warp-vignette');
+      warp.classList.add('warping');
+      setTimeout(() => warp.classList.remove('warping'), Math.round(durationMs * 0.65));
+    }
+
+    // Depth Typography Updater
+    const depthTitleEl = document.getElementById('depth-title');
+    const depthKickerEl = document.getElementById('depth-kicker');
+    let typoTimeout = null;
+
+    function updateDepthTypography(slide) {
+      clearTimeout(typoTimeout);
+      depthTitleEl.classList.remove('visible');
+      depthKickerEl.classList.remove('visible');
+      depthTitleEl.classList.add('exiting');
+      depthKickerEl.classList.add('exiting');
+
+      typoTimeout = setTimeout(() => {
+        depthKickerEl.textContent = slide.kicker;
+        depthTitleEl.textContent = slide.depthTitle;
+        depthTitleEl.className = `${slide.titleSize || ''} ${slide.titleTone || ''}`.trim();
+        depthKickerEl.className = '';
+        // Force reflow for crisp reveal after camera plunges in
+        void depthTitleEl.offsetWidth;
+        depthTitleEl.classList.add('visible');
+        depthKickerEl.classList.add('visible');
+      }, 360);
+    }
+
+    // Count-Up Number Animation for Slide 02 Stats
+    function triggerCountUps(slideEl) {
+      const els = slideEl.querySelectorAll('[data-count-target]');
+      els.forEach(el => {
+        const target = parseFloat(el.dataset.countTarget);
+        const suffix = el.dataset.countSuffix || '';
+        const decimals = parseInt(el.dataset.countDecimals || '0', 10);
+        const start = performance.now();
+        const dur = 1100;
+        function tick(now) {
+          const p = Math.min(1, (now - start) / dur);
+          const eased = 1 - Math.pow(1 - p, 3);
+          const val = target * eased;
+          if (decimals > 0) {
+            el.textContent = val.toFixed(decimals) + suffix;
+          } else {
+            el.textContent = Math.round(val).toLocaleString() + suffix;
+          }
+          if (p < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+      });
+    }
+
+    // Build Chapter Timeline Dots
+    const chapterDotsEl = document.getElementById('chapterDots');
+    SLIDES.forEach((s, idx) => {
+      const btn = document.createElement('button');
+      btn.className = 'chapter-dot w-2 h-2 rounded-full bg-purple-400/35 hover:bg-cyan-300/80';
+      btn.title = `${String(idx + 1).padStart(2, '0')} · ${s.label}`;
+      btn.setAttribute('aria-label', `Go to slide ${idx + 1}: ${s.label}`);
+      btn.onclick = () => goToSlide(idx);
+      chapterDotsEl.appendChild(btn);
+    });
+
+    function goToSlide(idx) {
+      if (idx < 0 || idx >= SLIDES.length) return;
+      currentSlideIdx = idx;
+      const slide = SLIDES[idx];
+
+      // Update Slide Overlays
+      const overlays = document.querySelectorAll('.slide-overlay');
+      overlays.forEach((ov, i) => {
+        if (i === idx) {
+          ov.classList.add('active');
+          if (i === 1) triggerCountUps(ov);
+        } else {
+          ov.classList.remove('active');
+        }
+      });
+
+      // Update Header & Footer Indicators
+      const numStr = String(idx + 1).padStart(2, '0');
+      document.getElementById('headerSlideNum').textContent = numStr;
+      document.getElementById('footerSlideTag').textContent = numStr;
+      document.getElementById('footerSlideTitle').textContent = slide.label;
+      document.getElementById('prevBtn').disabled = idx === 0;
+      document.getElementById('nextBtn').disabled = idx === SLIDES.length - 1;
+
+      const dots = chapterDotsEl.querySelectorAll('.chapter-dot');
+      dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+
+      // Reset Layer Focus if leaving Slide 06
+      if (idx !== 5) {
+        activeLayerFocus = 0;
+        clearLayerButtonHighlights();
+      } else {
+        focusLayer(0, false);
+      }
+
+      // Stop sandbox 28s auto-cycle if leaving Slide 07
+      if (idx !== 6) {
+        simState.running28s = false;
+        document.getElementById('simProgressWrap').classList.add('hidden');
+      }
+
+      // Apply Scene Biological Targets
+      if (slide.isSandbox) {
+        syncSandboxTo3D();
+      } else {
+        sceneTarget.chipVisible = slide.chipVisible;
+        sceneTarget.exploded = slide.exploded;
+        sceneTarget.tCells = slide.tCells;
+        sceneTarget.exosomeIntensity = slide.exosomeIntensity;
+        sceneTarget.shieldOpacity = slide.shieldOpacity;
+        sceneTarget.necrosis = slide.necrosis;
+        sceneTarget.tregRatio = slide.tregRatio;
+        sceneTarget.antibodies = slide.antibodies;
+      }
+
+      // Enable OrbitControls ONLY on Slide 06 (Exploded) & Slide 07 (Live Simulator)
+      controls.enabled = !!slide.interactiveOrbit;
+      webglContainer.classList.toggle('interactive-cursor', !!slide.interactiveOrbit);
+
+      // Launch Continuous Camera Flight + Depth Typography Transition
+      launchCameraFlight(slide.camPos, slide.target, 1350);
+      updateDepthTypography(slide);
+
+      // Reset Auto-Cinema timer bar if active
+      if (autoCinemaActive) {
+        autoCinemaSlideStart = performance.now();
+      }
+    }
+
+    function nextSlide() {
+      if (currentSlideIdx < SLIDES.length - 1) goToSlide(currentSlideIdx + 1);
+    }
+
+    function prevSlide() {
+      if (currentSlideIdx > 0) goToSlide(currentSlideIdx - 1);
+    }
+
+    // =========================================================================
+    // 5. SLIDE 06: INTERACTIVE 5-LAYER FOCUS & 3D RAYCASTING
+    // =========================================================================
+    function clearLayerButtonHighlights() {
+      for (let i = 1; i <= 5; i++) {
+        const b = document.getElementById(`layerBtn-${i}`);
+        if (b) b.classList.remove('layer-btn-active');
+      }
+    }
+
+    function focusLayer(layerNum, fly = true) {
+      activeLayerFocus = layerNum;
+      clearLayerButtonHighlights();
+      if (layerNum >= 1 && layerNum <= 5) {
+        const btn = document.getElementById(`layerBtn-${layerNum}`);
+        if (btn) btn.classList.add('layer-btn-active');
+      }
+      const info = LAYER_DETAILS[layerNum] || LAYER_DETAILS[0];
+      document.getElementById('layerDetailTag').textContent = info.tag;
+      document.getElementById('layerDetailSpec').textContent = info.spec;
+      document.getElementById('layerDetailTitle').textContent = info.title;
+      document.getElementById('layerDetailBody').textContent = info.body;
+      document.getElementById('layerDetailMetric').textContent = info.metric;
+      if (fly) {
+        launchCameraFlight(info.camPos, info.target, 950);
+      }
+    }
+
+    const raycaster = new THREE.Raycaster();
+    const clickMouse = new THREE.Vector2();
+    let pointerStart = { x: 0, y: 0 };
+
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      pointerStart = { x: e.clientX, y: e.clientY };
+    });
+
+    renderer.domElement.addEventListener('pointerup', (e) => {
+      if (currentSlideIdx !== 5) return;
+      if (Math.hypot(e.clientX - pointerStart.x, e.clientY - pointerStart.y) > 6) return;
+      const rect = renderer.domElement.getBoundingClientRect();
+      clickMouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      clickMouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(clickMouse, camera);
+      const hits = raycaster.intersectObjects(nanochipGroup.children, true);
+      if (hits.length > 0) {
+        let obj = hits[0].object;
+        while (obj) {
+          if (obj.userData && obj.userData.layerId) {
+            focusLayer(obj.userData.layerId, true);
+            return;
+          }
+          obj = obj.parent;
+        }
+      }
+    });
+
+    // =========================================================================
+    // 6. SLIDE 07: LIVE INTERACTIVE TRAINED TINYML DIGITAL TWIN SANDBOX
+    // =========================================================================
+    const simState = {
+      protectedMode: true,
+      il6: 4,
+      ifng: 3,
+      ph: 7.40,
+      tCells: 0,
+      riskPct: 1.2,
+      il10Rate: 0,
+      tgfbRate: 0,
+      insulinPct: 100,
+      resIl10Nl: 50000,
+      resTgfbNl: 50000,
+      running28s: false,
+      runStart: 0,
+      runDuration: 28.0,
+      docksHidden: false,
+      logFlags: { triggered: false, peak: false, treg: false }
+    };
+
+    function appendSimLog(msg, colorClass = 'text-slate-300', sec = null) {
+      const box = document.getElementById('simCmdLog');
+      if (!box) return;
+      const stamp = sec !== null ? `[${sec.toFixed(1).padStart(4, '0')}s]` : `[LIVE]`;
+      const row = document.createElement('div');
+      row.className = colorClass;
+      row.textContent = `${stamp} > ${msg}`;
+      box.appendChild(row);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function updateSimReservoirUI() {
+      const p1 = (simState.resIl10Nl / 50000) * 100;
+      const p2 = (simState.resTgfbNl / 50000) * 100;
+      document.getElementById('simResIl10').textContent = `${Math.round(simState.resIl10Nl).toLocaleString()} nL (${p1.toFixed(2)}%)`;
+      document.getElementById('simResTgfb').textContent = `${Math.round(simState.resTgfbNl).toLocaleString()} nL (${p2.toFixed(2)}%)`;
+    }
+
+    function consumeSimDose() {
+      simState.resIl10Nl = Math.max(0, simState.resIl10Nl - 25);
+      simState.resTgfbNl = Math.max(0, simState.resTgfbNl - 25);
+      updateSimReservoirUI();
+    }
+
+    function refillSimReservoirs() {
+      simState.resIl10Nl = 50000;
+      simState.resTgfbNl = 50000;
+      updateSimReservoirUI();
+      appendSimLog('Transdermal microneedle patch applied: 50,000 nL restored (100.00%).', 'text-cyan-300');
+    }
+
+    function evaluateTrainedTinyML() {
+      simState.il6 = parseFloat(document.getElementById('simIl6Slider').value);
+      simState.ifng = parseFloat(document.getElementById('simIfngSlider').value);
+      simState.ph = parseFloat(document.getElementById('simPhSlider').value) / 100;
+      simState.tCells = parseInt(document.getElementById('simTcellSlider').value, 10);
+
+      document.getElementById('simIl6Val').textContent = `${Math.round(simState.il6)} pg/mL`;
+      document.getElementById('simIfngVal').textContent = `${Math.round(simState.ifng)} pg/mL`;
+      document.getElementById('simPhVal').textContent = simState.ph.toFixed(2);
+      document.getElementById('simTcellVal').textContent = simState.tCells === 0 ? '0 Cells' : `${simState.tCells} Cells`;
+
+      // Exact Logistic Classifier Inference from ENDOCORE_MODEL
+      const phDrop = Math.max(0, ENDOCORE_MODEL.ph_reference - simState.ph);
+      const C = ENDOCORE_MODEL.coefficients;
+      const logit =
+        ENDOCORE_MODEL.intercept +
+        simState.il6 * C.il_6_pg_ml +
+        simState.ifng * C.ifn_gamma_pg_ml +
+        phDrop * C.ph_drop +
+        simState.tCells * C.cd8_tcell_count;
+
+      const rawProb = (1 / (1 + Math.exp(-logit))) * 100;
+      simState.riskPct = Math.min(99.9, Math.max(1.2, rawProb));
+      const isAttack = simState.riskPct >= ENDOCORE_MODEL.decision_threshold * 100;
+
+      const alertBox = document.getElementById('simAlertBox');
+      const statusTitle = document.getElementById('simStatusTitle');
+      document.getElementById('simRiskPct').textContent = `${simState.riskPct.toFixed(1)}%`;
+
+      if (simState.protectedMode) {
+        if (isAttack) {
+          simState.il10Rate = Math.min(100, Math.round(simState.riskPct * 1.02));
+          simState.tgfbRate = Math.min(100, Math.round(simState.riskPct * 0.88));
+          simState.insulinPct = 98;
+          alertBox.className = 'rounded-xl p-2.5 border border-cyan-400/75 bg-cyan-950/45 transition-colors';
+          statusTitle.className = 'text-xs font-extrabold text-cyan-300';
+          statusTitle.textContent = 'SHIELD ACTIVE: IL-10 & TGF-β';
+        } else {
+          simState.il10Rate = 0;
+          simState.tgfbRate = 0;
+          simState.insulinPct = 100;
+          alertBox.className = 'rounded-xl p-2.5 border border-emerald-500/40 bg-emerald-950/35 transition-colors';
+          statusTitle.className = 'text-xs font-extrabold text-emerald-300';
+          statusTitle.textContent = 'NOMINAL: HOMEOSTASIS';
+        }
+      } else {
+        simState.il10Rate = 0;
+        simState.tgfbRate = 0;
+        const severity = Math.min(1, Math.max(0, (simState.riskPct - 12) / 80));
+        simState.insulinPct = simState.riskPct >= 92 ? 0 : Math.max(0, Math.round(100 * (1 - Math.pow(severity, 0.9))));
+        alertBox.className = 'rounded-xl p-2.5 border border-rose-500/75 bg-rose-950/50 transition-colors';
+        statusTitle.className = 'text-xs font-extrabold text-rose-300';
+        statusTitle.textContent = simState.insulinPct === 0 ? 'GRAFT FAILURE (0% INSULIN)' : 'UNPROTECTED DESTRUCTION';
+      }
+
+      document.getElementById('simIl10Text').textContent = simState.il10Rate === 0 ? '0% (Closed)' : `${simState.il10Rate}% (Open)`;
+      document.getElementById('simIl10Bar').style.width = `${simState.il10Rate}%`;
+      document.getElementById('simTgfbText').textContent = simState.tgfbRate === 0 ? '0% (Closed)' : `${simState.tgfbRate}% (Open)`;
+      document.getElementById('simTgfbBar').style.width = `${simState.tgfbRate}%`;
+      document.getElementById('simInsulinText').textContent = `${simState.insulinPct}%`;
+      document.getElementById('simInsulinBar').style.width = `${simState.insulinPct}%`;
+
+      if (currentSlideIdx === 6) {
+        syncSandboxTo3D();
+      }
+    }
+
+    function syncSandboxTo3D() {
+      const isAttack = simState.riskPct >= ENDOCORE_MODEL.decision_threshold * 100;
+      sceneTarget.chipVisible = simState.protectedMode;
+      sceneTarget.exploded = 0;
+      sceneTarget.tCells = simState.tCells;
+      sceneTarget.exosomeIntensity = simState.protectedMode ? simState.il10Rate / 100 : 0;
+      sceneTarget.shieldOpacity = (simState.protectedMode && isAttack) ? 0.18 : 0.03;
+      sceneTarget.necrosis = simState.protectedMode ? 0 : (1 - simState.insulinPct / 100);
+      sceneTarget.tregRatio = (simState.protectedMode && isAttack && simState.il10Rate > 35) ? 0.78 : 0.0;
+      sceneTarget.antibodies = false;
+    }
+
+    function onSimSliderChange() {
+      simState.running28s = false;
+      document.getElementById('simProgressWrap').classList.add('hidden');
+      document.getElementById('simPhasePill').textContent = 'Manual';
+      evaluateTrainedTinyML();
+      if (simState.protectedMode && simState.riskPct >= 35.0) {
+        consumeSimDose();
+        appendSimLog(`Manual threshold crossed (${simState.riskPct.toFixed(1)}%). Dispensing 25 nL IL-10/TGF-β.`, 'text-cyan-300');
+      }
+    }
+
+    function setSimMode(isProtected) {
+      simState.protectedMode = isProtected;
+      const pBtn = document.getElementById('simModeProtBtn');
+      const uBtn = document.getElementById('simModeUnprotBtn');
+      if (isProtected) {
+        pBtn.className = 'py-1.5 px-2 rounded-lg text-[11px] font-bold bg-gradient-to-r from-purple-600 to-cyan-600 text-white shadow transition';
+        uBtn.className = 'py-1.5 px-2 rounded-lg text-[11px] font-bold text-slate-400 hover:text-white transition';
+        appendSimLog('EndoCore Bio-Shield ENGAGED.', 'text-cyan-300');
+      } else {
+        uBtn.className = 'py-1.5 px-2 rounded-lg text-[11px] font-bold bg-rose-600 text-white shadow transition';
+        pBtn.className = 'py-1.5 px-2 rounded-lg text-[11px] font-bold text-slate-400 hover:text-white transition';
+        appendSimLog('EndoCore Nanochip REMOVED (Unprotected T1D mode).', 'text-rose-400');
+      }
+      evaluateTrainedTinyML();
+    }
+
+    function runSim28sAttack() {
+      simState.running28s = true;
+      simState.runStart = performance.now();
+      simState.logFlags = { triggered: false, peak: false, treg: false };
+      document.getElementById('simProgressWrap').classList.remove('hidden');
+      document.getElementById('simPhasePill').textContent = simState.protectedMode ? '28s Shield Cycle' : '28s Unprotected';
+      document.getElementById('simCmdLog').innerHTML = '';
+      appendSimLog(
+        simState.protectedMode
+          ? 'Initiating 28s Autoimmune Flare-Up: CD8+ T-cells infiltrating...'
+          : 'Unprotected Flare-Up: No bio-shield present! Beta cells exposed...',
+        'text-rose-400',
+        0.0
+      );
+    }
+
+    function resetSimSandbox() {
+      simState.running28s = false;
+      simState.protectedMode = true;
+      setSimMode(true);
+      document.getElementById('simIl6Slider').value = 4;
+      document.getElementById('simIfngSlider').value = 3;
+      document.getElementById('simPhSlider').value = 740;
+      document.getElementById('simTcellSlider').value = 0;
+      document.getElementById('simProgressWrap').classList.add('hidden');
+      document.getElementById('simPhasePill').textContent = 'Baseline';
+      document.getElementById('simCmdLog').innerHTML = '';
+      appendSimLog('Digital twin reset to baseline homeostasis.', 'text-emerald-400', 0.0);
+      evaluateTrainedTinyML();
+    }
+
+    function toggleSimDocks() {
+      simState.docksHidden = !simState.docksHidden;
+      const wrap = document.getElementById('simDocksWrapper');
+      const btn = document.getElementById('simDockToggleBtn');
+      wrap.classList.toggle('opacity-0', simState.docksHidden);
+      wrap.classList.toggle('pointer-events-none', simState.docksHidden);
+      btn.textContent = simState.docksHidden ? 'Show Docks' : 'Hide Docks (Full 3D)';
+    }
+
+    // =========================================================================
+    // 7. AUTO-CINEMA MODE, BMC MODAL & FULLSCREEN
+    // =========================================================================
+    let autoCinemaActive = false;
+    let autoCinemaSlideStart = 0;
+    const AUTO_CINEMA_MS = 7500;
+
+    function toggleAutoCinema() {
+      autoCinemaActive = !autoCinemaActive;
+      const textEl = document.getElementById('autoCinemaText');
+      const iconEl = document.getElementById('autoCinemaIcon');
+      const barEl = document.getElementById('autoCinemaBar');
+
+      if (autoCinemaActive) {
+        autoCinemaSlideStart = performance.now();
+        textEl.textContent = 'Pause Cinema';
+        iconEl.innerHTML = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+      } else {
+        textEl.textContent = 'Auto-Cinema';
+        iconEl.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+        barEl.style.width = '0%';
+      }
+    }
+
+    function replayCinemaTour() {
+      goToSlide(0);
+      if (!autoCinemaActive) toggleAutoCinema();
+    }
+
+    function openBmcModal() {
+      const m = document.getElementById('bmcModal');
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+    }
+
+    function closeBmcModal() {
+      const m = document.getElementById('bmcModal');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+    }
+
+    function toggleFullscreen() {
+      try {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen();
+        } else {
+          document.exitFullscreen();
+        }
+      } catch (err) {
+        console.warn('Fullscreen unavailable in embedded viewport:', err);
+      }
+    }
+
+    // =========================================================================
+    // 8. KEYBOARD, WHEEL & TOUCH NAVIGATION
+    // =========================================================================
+    window.addEventListener('keydown', (e) => {
+      if (document.getElementById('bmcModal').classList.contains('flex')) {
+        if (e.key === 'Escape') closeBmcModal();
+        return;
+      }
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        prevSlide();
+      } else if (e.key === 'Home') {
+        goToSlide(0);
+      } else if (e.key === 'End') {
+        goToSlide(SLIDES.length - 1);
+      } else if (e.key >= '1' && e.key <= '9') {
+        goToSlide(parseInt(e.key, 10) - 1);
+      }
+    });
+
+    let lastWheelTime = 0;
+    window.addEventListener('wheel', (e) => {
+      // Never hijack scrolling inside panels, modals, or 3D zoom on interactive slides
+      if (e.target.closest('.scrollable-panel') || document.getElementById('bmcModal').classList.contains('flex')) return;
+      if (SLIDES[currentSlideIdx].interactiveOrbit) return;
+
+      const now = performance.now();
+      if (now - lastWheelTime < 900) return;
+      if (Math.abs(e.deltaY) < 28) return;
+
+      lastWheelTime = now;
+      if (e.deltaY > 0) nextSlide();
+      else prevSlide();
+    }, { passive: true });
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+    window.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    window.addEventListener('touchend', (e) => {
+      if (SLIDES[currentSlideIdx].interactiveOrbit) return;
+      if (e.changedTouches.length !== 1) return;
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+        if (dx < 0) nextSlide();
+        else prevSlide();
+      }
+    }, { passive: true });
+
+    // =========================================================================
+    // 9. MASTER ANIMATION LOOP
+    // =========================================================================
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+      const now = performance.now();
+
+      // --- Auto-Cinema Progression ---
+      if (autoCinemaActive) {
+        const elapsed = now - autoCinemaSlideStart;
+        const pct = Math.min(100, (elapsed / AUTO_CINEMA_MS) * 100);
+        document.getElementById('autoCinemaBar').style.width = `${pct}%`;
+        if (elapsed >= AUTO_CINEMA_MS) {
+          if (currentSlideIdx < SLIDES.length - 1) {
+            goToSlide(currentSlideIdx + 1);
+          } else {
+            toggleAutoCinema();
+          }
+        }
+      }
+
+      // --- Slide 07 Live 28-Second Attack Simulation Engine ---
+      if (simState.running28s && currentSlideIdx === 6) {
+        const sec = (now - simState.runStart) / 1000;
+        const prog = Math.min(1, sec / simState.runDuration);
+        const rem = Math.max(0, simState.runDuration - sec);
+        document.getElementById('simProgressBar').style.width = `${(prog * 100).toFixed(1)}%`;
+        document.getElementById('simProgressTime').textContent = `${rem.toFixed(1)}s`;
+
+        if (simState.protectedMode) {
+          if (sec <= 8.0) {
+            const p = Math.pow(sec / 8.0, 1.3);
+            document.getElementById('simIl6Slider').value = (4 + 81 * p).toFixed(1);
+            document.getElementById('simIfngSlider').value = (3 + 89 * p).toFixed(1);
+            document.getElementById('simPhSlider').value = Math.round((7.40 - 0.55 * p) * 100);
+            document.getElementById('simTcellSlider').value = Math.round(48 * p);
+            document.getElementById('simProgressLabel').textContent = 'Phase 1: Cytokine Escalation...';
+            evaluateTrainedTinyML();
+
+            if (simState.riskPct >= 35.0 && !simState.logFlags.triggered) {
+              simState.logFlags.triggered = true;
+              consumeSimDose();
+              appendSimLog(`Threshold crossed (${simState.riskPct.toFixed(1)}% > 35%) in <50 ms! Dispensing 25 nL IL-10/TGF-β.`, 'text-cyan-300', sec);
+            }
+          } else {
+            if (!simState.logFlags.peak) {
+              simState.logFlags.peak = true;
+              appendSimLog('Peak attack intercepted (IL-6 85, 48 T-cells). Converting to FoxP3+ Tregs...', 'text-amber-300', 8.0);
+            }
+            const downP = (sec - 8.0) / (simState.runDuration - 8.0);
+            const easeDown = 1 - Math.pow(1 - Math.min(1, downP), 2.0);
+            document.getElementById('simIl6Slider').value = (85 - 81 * easeDown).toFixed(1);
+            document.getElementById('simIfngSlider').value = (92 - 89 * easeDown).toFixed(1);
+            document.getElementById('simPhSlider').value = Math.round((6.85 + 0.55 * easeDown) * 100);
+            document.getElementById('simTcellSlider').value = Math.round(48 * (1 - easeDown));
+            document.getElementById('simProgressLabel').textContent = 'Phase 2: Exosomal Regulation...';
+            evaluateTrainedTinyML();
+
+            if (sec >= 17.0 && !simState.logFlags.treg) {
+              simState.logFlags.treg = true;
+              appendSimLog('CD8+ T-cells converted to peaceful cyan FoxP3+ Tregs.', 'text-emerald-400', 17.0);
+            }
+            if (prog >= 1) {
+              simState.running28s = false;
+              document.getElementById('simProgressWrap').classList.add('hidden');
+              appendSimLog('Homeostasis restored! 100% Beta-cell viability preserved.', 'text-emerald-300', 28.0);
+            }
+          }
+        } else {
+          const ease = Math.pow(prog, 1.15);
+          document.getElementById('simIl6Slider').value = (12 + 86 * ease).toFixed(1);
+          document.getElementById('simIfngSlider').value = (14 + 86 * ease).toFixed(1);
+          document.getElementById('simPhSlider').value = Math.round((7.32 - 0.77 * ease) * 100);
+          document.getElementById('simTcellSlider').value = Math.round(6 + 54 * ease);
+          document.getElementById('simProgressLabel').textContent = `Unprotected Necrosis (${simState.insulinPct}% Viable)...`;
+          evaluateTrainedTinyML();
+
+          if (sec >= 12.0 && !simState.logFlags.triggered) {
+            simState.logFlags.triggered = true;
+            appendSimLog('50% of unprotected beta cells destroyed (turning grey)...', 'text-rose-400', 12.0);
+          }
+          if (prog >= 1) {
+            simState.running28s = false;
+            document.getElementById('simProgressWrap').classList.add('hidden');
+            appendSimLog('GRAFT FAILURE: 100% Beta-cell necrosis. Insulin output = 0%.', 'text-rose-400', 28.0);
+          }
+        }
+      }
+
+      // --- Continuous Cinematic Camera Flight with FOV Speed-Warp Pulse ---
+      if (flight.active) {
+        const p = Math.min(1, (now - flight.startTime) / flight.duration);
+        const eased = easeInOutCubic(p);
+
+        camera.position.lerpVectors(flight.fromPos, flight.toPos, eased);
+        controls.target.lerpVectors(flight.fromTarget, flight.toTarget, eased);
+
+        // Dynamic FOV pulse: 42° -> 54° -> 42° for continuous cinema plunge sensation
+        const fovPulse = Math.sin(p * Math.PI) * 12.0;
+        camera.fov = 42 + fovPulse;
+        camera.updateProjectionMatrix();
+
+        if (p >= 1) {
+          flight.active = false;
+          camera.fov = 42;
+          camera.updateProjectionMatrix();
+        }
+      } else if (!SLIDES[currentSlideIdx].interactiveOrbit) {
+        // Gentle Parallax + Subtle Breathing Drift on Cinema Slides
+        mouseParallax.smoothX += (mouseParallax.x - mouseParallax.smoothX) * 0.04;
+        mouseParallax.smoothY += (mouseParallax.y - mouseParallax.smoothY) * 0.04;
+        const base = SLIDES[currentSlideIdx].camPos;
+        camera.position.x = base[0] + mouseParallax.smoothX * 1.45 + Math.sin(t * 0.35) * 0.35;
+        camera.position.y = base[1] - mouseParallax.smoothY * 0.85 + Math.cos(t * 0.28) * 0.25;
+        camera.position.z = base[2];
+        camera.lookAt(controls.target);
+      }
+
+      // --- Smooth 3D Scene Transitions (Explosion, Necrosis, Shield, Antibodies) ---
+      nanochipGroup.visible = sceneTarget.chipVisible;
+      antibodyGroup.visible = sceneTarget.antibodies;
+
+      sceneLive.exploded += (sceneTarget.exploded - sceneLive.exploded) * 0.08;
+      chipLayers.forEach(layer => {
+        const ty = layer.userData.baseY + (layer.userData.explodeY - layer.userData.baseY) * sceneLive.exploded;
+        layer.position.y += (ty - layer.position.y) * 0.14;
+      });
+
+      if (sceneLive.exploded < 0.5) {
+        nanochipGroup.rotation.y = t * 0.22;
+      } else {
+        nanochipGroup.rotation.y += (Math.sin(t * 0.25) * 0.16 - nanochipGroup.rotation.y) * 0.08;
+      }
+
+      sceneLive.shieldOpacity += (sceneTarget.shieldOpacity - sceneLive.shieldOpacity) * 0.08;
+      shieldMat.opacity = sceneLive.shieldOpacity;
+      shieldLight.intensity = sceneLive.shieldOpacity * 10.5;
+      shieldDome.rotation.y = -t * 0.16;
+
+      // Smooth Beta-Cell Health / Grey Necrosis Transition
+      sceneLive.necrosis += (sceneTarget.necrosis - sceneLive.necrosis) * 0.06;
+      betaCells.forEach((cell, idx) => {
+        const threshold = (idx / betaCells.length) * 0.94;
+        const isDead = sceneLive.necrosis > 0.05 && (sceneLive.necrosis >= threshold || sceneLive.necrosis >= 0.96);
+        if (isDead) {
+          cell.material.color.lerp(cell.userData.necroticColor, 0.09);
+          cell.material.emissive.lerp(cell.userData.necroticEmissive, 0.09);
+          cell.material.opacity = 0.52;
+          cell.scale.lerp(cell.userData.baseScale.clone().multiplyScalar(0.68), 0.08);
+        } else {
+          cell.material.color.lerp(cell.userData.baseColor, 0.09);
+          cell.material.emissive.lerp(cell.userData.baseColor, 0.09);
+          cell.material.opacity = 0.76;
+          const pulse = 1 + Math.sin(t * 2.2 + cell.userData.pulseOffset) * 0.03;
+          cell.scale.set(
+            cell.userData.baseScale.x * pulse,
+            cell.userData.baseScale.y * pulse,
+            cell.userData.baseScale.z * pulse
+          );
+        }
+      });
+
+      isletSparkleGroup.visible = sceneLive.necrosis < 0.75;
+
+      // Insulin Droplet Diffusion
+      const activeInsulinCount = Math.floor((1 - sceneLive.necrosis) * insulinParticles.length);
+      insulinParticles.forEach((ins, idx) => {
+        if (idx >= activeInsulinCount) {
+          ins.visible = false;
+          return;
+        }
+        ins.visible = true;
+        const ud = ins.userData;
+        ud.progress += ud.speed;
+        if (ud.progress > 1) ud.progress = 0;
+        const r = 0.8 + ud.progress * ud.maxRadius;
+        ins.position.set(ud.dir.x * r, ud.dir.y * r, ud.dir.z * r);
+      });
+
+      // Dynamic Spiky CD8+ T-Cells -> Cyan FoxP3+ Tregs
+      const tregCount = Math.round(sceneTarget.tCells * sceneTarget.tregRatio);
+      tCells.forEach((tc, idx) => {
+        tc.visible = idx < sceneTarget.tCells;
+        if (!tc.visible) return;
+
+        const ud = tc.userData;
+        ud.isTreg = idx < tregCount;
+        ud.bodyMat.color.setHex(ud.isTreg ? 0x22d3ee : 0x22c55e);
+        ud.bodyMat.emissive.setHex(ud.isTreg ? 0x083344 : 0x14532d);
+
+        ud.angle += 0.0048 * ud.speed;
+        let targetR = ud.baseRadius;
+        if (!sceneTarget.chipVisible) {
+          targetR = 4.6 + (ud.baseRadius - 11.2) * 0.24; // Swarm right into unprotected islet!
+        } else if (ud.isTreg) {
+          targetR = 11.8; // Peaceful Treg outer ring
+        } else {
+          targetR = 8.4; // Repelled by shield
+        }
+
+        const curR = Math.sqrt(tc.position.x * tc.position.x + tc.position.z * tc.position.z);
+        const nextR = curR + (targetR - curR) * 0.05;
+        tc.position.x = Math.cos(ud.angle) * nextR;
+        tc.position.z = Math.sin(ud.angle) * nextR;
+        tc.position.y = ud.height + Math.sin(t * 1.6 + ud.angle) * 0.4;
+        tc.rotation.x += 0.01;
+        tc.rotation.y += 0.012;
+      });
+
+      // White Spiky APC Float
+      apcCells.forEach(apc => {
+        const ud = apc.userData;
+        apc.position.x = ud.basePos.x + Math.sin(t * 0.35 + ud.offset) * 0.28;
+        apc.position.y = ud.basePos.y + Math.cos(t * 0.3 + ud.offset) * 0.22;
+        apc.position.z = ud.basePos.z + Math.cos(t * 0.35 + ud.offset) * 0.28;
+        apc.rotation.y = Math.sin(t * 0.22 + ud.offset) * 0.25;
+      });
+
+      // Autoantibodies Float (Slide 03)
+      if (antibodyGroup.visible) {
+        heroAbs.forEach((ab, i) => {
+          ab.position.y = ab.userData.baseY + Math.sin(t * 1.4 + i) * 0.16;
+          ab.rotation.y = Math.sin(t * 0.5 + i) * 0.35;
+        });
+        orbitingAbs.forEach(ab => {
+          const ud = ab.userData;
+          ud.angle += 0.0038 * ud.speed;
+          ab.position.x = Math.cos(ud.angle) * ud.rad;
+          ab.position.z = Math.sin(ud.angle) * ud.rad;
+          ab.rotation.x += 0.012;
+          ab.rotation.y += 0.014;
+        });
+      }
+
+      // Exosome Stream from Layer 5 Reservoirs
+      const activeExo = sceneTarget.chipVisible ? Math.floor(sceneTarget.exosomeIntensity * exosomes.length) : 0;
+      exosomes.forEach((exo, idx) => {
+        if (idx >= activeExo) {
+          exo.visible = false;
+          return;
+        }
+        exo.visible = true;
+        const ud = exo.userData;
+        ud.progress += ud.speed;
+        if (ud.progress > 1) ud.progress = 0;
+        const r = ud.progress * ud.spread;
+        exo.position.set(
+          0.5 + Math.cos(ud.angle + t * 0.45) * r,
+          5.5 - ud.progress * 8.6,
+          0.2 + Math.sin(ud.angle + t * 0.45) * r
+        );
+      });
+
+      dustPoints.rotation.y = t * 0.025;
+
+      if (controls.enabled) {
+        controls.update();
+      }
+      renderer.render(scene, camera);
+    }
+
+    // Handle Viewport Resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Boot Sequence
+    window.onload = function () {
+      updateSimReservoirUI();
+      evaluateTrainedTinyML();
+      goToSlide(0);
+      animate();
+    };
+  </script>
+</body>
+</html>
