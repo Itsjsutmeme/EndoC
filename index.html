@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#210c2c" />
+  <title>EndoCore — Presentation</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #210c2c; }
+    #deck { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: #210c2c; }
+  </style>
+</head>
+<body>
+  <iframe id="deck" title="EndoCore presentation" src="./endocore_cinematic_3d_interactive_presentation.html"></iframe>
+  <script>
+    const deck = document.getElementById('deck');
+    deck.addEventListener('load', () => {
+      const doc = deck.contentDocument;
+      const win = deck.contentWindow;
+      if (!doc || !win || doc.getElementById('presentation-accessibility-upgrades')) return;
+
+      const style = doc.createElement('style');
+      style.id = 'presentation-accessibility-upgrades';
+      style.textContent = `
+        html, body { background: #210c2c !important; }
+        #layer-bg { background: #210c2c !important; }
+        .nebula-orb { display: none !important; }
+        #layer-slides { overflow-y: auto !important; scrollbar-width: thin; scrollbar-color: rgba(192,132,252,.55) rgba(15,7,26,.35); }
+        .slide-overlay { padding: clamp(14px,2.1vh,26px) clamp(16px,4vw,64px) !important; }
+        .slide-overlay.active { overflow-y: auto !important; }
+        #layer-slides [class~="text-xs"] { font-size: clamp(15px,1.08vw,19px) !important; line-height: 1.45 !important; }
+        #layer-slides [class~="text-sm"] { font-size: clamp(16px,1.2vw,21px) !important; line-height: 1.45 !important; }
+        #layer-slides [class~="text-[9px]"], #layer-slides [class~="text-[9.5px]"], #layer-slides [class~="text-[10px]"] { font-size: clamp(13px,.95vw,16px) !important; line-height: 1.35 !important; }
+        #layer-slides [class~="text-[11px]"] { font-size: clamp(14px,1vw,17px) !important; line-height: 1.4 !important; }
+        #depth-title { font-size: clamp(50px,7.6vw,112px) !important; max-width: 92vw !important; line-height: .92 !important; }
+        #depth-title.size-xl { font-size: clamp(72px,13vw,190px) !important; }
+        #depth-kicker { font-size: clamp(12px,1vw,16px) !important; }
+        body:has(.slide-overlay[data-slide="1"].active) #layer-depth-typo,
+        body:has(.slide-overlay[data-slide="2"].active) #layer-depth-typo,
+        body:has(.slide-overlay[data-slide="5"].active) #layer-depth-typo { justify-content: flex-start !important; padding-top: 68px !important; }
+        #layerDetailTag, #layerDetailSpec, #layerDetailMetric { font-size: clamp(13px,1vw,16px) !important; }
+        .slide-overlay[data-slide="5"] #layerBtn-1, .slide-overlay[data-slide="5"] #layerBtn-2,
+        .slide-overlay[data-slide="5"] #layerBtn-3, .slide-overlay[data-slide="5"] #layerBtn-4,
+        .slide-overlay[data-slide="5"] #layerBtn-5 { padding-top: 12px !important; padding-bottom: 12px !important; }
+        [data-count-target] { font-size: clamp(40px,4vw,62px) !important; }
+        [data-count-target] + div { font-size: clamp(14px,1vw,17px) !important; }
+        .readability-float { transition: transform .6s cubic-bezier(.2,.8,.2,1); transform: translate(var(--float-x,0px),var(--float-y,0px)); }
+        .editorial-figure { position: absolute; z-index: 0; pointer-events: none; filter: drop-shadow(0 18px 34px rgba(0,0,0,.4)); }
+        .slide-overlay[data-slide="1"] > .editorial-figure { width: clamp(230px,26vw,390px); right: 33%; top: 28%; opacity: .94; }
+        .slide-overlay[data-slide="10"] > .editorial-figure { width: clamp(240px,30vw,420px); right: 3%; top: 24%; opacity: .9; }
+        .slide-overlay[data-slide="1"] > :not(.editorial-figure),
+        .slide-overlay[data-slide="10"] > :not(.editorial-figure) { position: relative; z-index: 1; }
+        @media (max-width: 900px) {
+          #layer-slides [class~="text-xs"] { font-size: 15px !important; }
+          .slide-overlay[data-slide="1"] > .editorial-figure { width: 210px; right: 5%; top: 38%; opacity: .35; }
+          .slide-overlay[data-slide="10"] > .editorial-figure { width: 220px; right: 3%; top: 36%; opacity: .28; }
+        }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+      `;
+      doc.head.appendChild(style);
+
+      const pumpFigure = `
+        <figure class="editorial-figure" aria-label="Illustrative insulin pump and tubing beside the autoimmune attack scene">
+          <svg viewBox="0 0 420 300" role="img" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="pumpShell" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f8f2ff"/><stop offset=".5" stop-color="#b9a2d8"/><stop offset="1" stop-color="#725b98"/></linearGradient>
+              <linearGradient id="pumpScreen" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#173348"/><stop offset="1" stop-color="#07131f"/></linearGradient>
+              <filter id="pumpGlow"><feGaussianBlur stdDeviation="8"/></filter>
+            </defs>
+            <ellipse cx="184" cy="252" rx="115" ry="17" fill="#a855f7" opacity=".28" filter="url(#pumpGlow)"/>
+            <g transform="rotate(-8 175 140)">
+              <rect x="72" y="34" width="205" height="225" rx="38" fill="#170d25" opacity=".8" transform="translate(0 9)"/>
+              <rect x="72" y="28" width="205" height="225" rx="38" fill="url(#pumpShell)" stroke="#f1e7ff" stroke-width="3"/>
+              <rect x="94" y="52" width="161" height="106" rx="16" fill="url(#pumpScreen)" stroke="#70e5f4" stroke-opacity=".8" stroke-width="2"/>
+              <text x="109" y="78" fill="#a5f3fc" font-family="monospace" font-size="13" letter-spacing="1">INSULIN DELIVERY</text>
+              <text x="109" y="119" fill="#f8fafc" font-family="monospace" font-size="31" font-weight="700">0.8</text>
+              <text x="178" y="119" fill="#c4b5fd" font-family="monospace" font-size="13">U / h</text>
+              <path d="M108 139h24l10-12 13 13 10-8 12 7h58" fill="none" stroke="#22d3ee" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="174" cy="193" r="22" fill="#36224b" stroke="#eadcff" stroke-width="2"/>
+              <path d="m168 193 6-7 6 7-6 7z" fill="#d9c3f5"/>
+              <circle cx="119" cy="193" r="10" fill="#563d70" stroke="#d7c6e8"/>
+              <circle cx="229" cy="193" r="10" fill="#563d70" stroke="#d7c6e8"/>
+            </g>
+            <path d="M276 225 C330 235 348 197 338 166 C327 132 365 123 384 144" fill="none" stroke="#b6f3ff" stroke-width="5" stroke-linecap="round"/>
+            <circle cx="384" cy="144" r="13" fill="#22d3ee" stroke="#e0fbff" stroke-width="3"/>
+            <rect x="75" y="267" width="275" height="27" rx="13" fill="#150b22" fill-opacity=".88" stroke="#a855f7" stroke-opacity=".6"/>
+            <text x="212" y="285" text-anchor="middle" fill="#f3e8ff" font-family="Inter,Arial" font-size="13" font-weight="700">INSULIN PUMP · ILLUSTRATIVE</text>
+          </svg>
+        </figure>`;
+
+      const economyFigure = `
+        <figure class="editorial-figure" aria-label="Illustrative five-year cost comparison chart">
+          <svg viewBox="0 0 440 250" role="img" xmlns="http://www.w3.org/2000/svg">
+            <defs><linearGradient id="econBarA" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#a855f7"/><stop offset="1" stop-color="#e879f9"/></linearGradient><linearGradient id="econBarB" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#06b6d4"/><stop offset="1" stop-color="#34d399"/></linearGradient></defs>
+            <rect x="8" y="8" width="424" height="234" rx="24" fill="#160c24" fill-opacity=".94" stroke="#c084fc" stroke-opacity=".5"/>
+            <text x="32" y="42" fill="#e9d5ff" font-family="monospace" font-size="14" font-weight="700" letter-spacing="2">5-YEAR COST MODEL · ILLUSTRATIVE</text>
+            <text x="32" y="88" fill="#cbd5e1" font-family="Inter,Arial" font-size="16">Current care</text>
+            <rect x="150" y="69" width="238" height="28" rx="14" fill="url(#econBarA)"/>
+            <text x="32" y="145" fill="#cbd5e1" font-family="Inter,Arial" font-size="16">EndoCore model</text>
+            <rect x="150" y="126" width="104" height="28" rx="14" fill="url(#econBarB)"/>
+            <path d="M32 177h376" stroke="#7c668e" stroke-opacity=".55"/>
+            <text x="32" y="206" fill="#67e8f9" font-family="monospace" font-size="15" font-weight="700">173,325 SAR  vs  27,100 SAR</text>
+            <text x="32" y="228" fill="#a78bba" font-family="Inter,Arial" font-size="12">Assumptions and follow-up costs remain stated on slide</text>
+          </svg>
+        </figure>`;
+
+      const addFigures = () => {
+        const problem = doc.querySelector('.slide-overlay[data-slide="1"]');
+        const economy = doc.querySelector('.slide-overlay[data-slide="10"]');
+        if (problem && !problem.querySelector('.editorial-figure')) problem.insertAdjacentHTML('afterbegin', pumpFigure);
+        if (economy && !economy.querySelector('.editorial-figure')) economy.insertAdjacentHTML('afterbegin', economyFigure);
+      };
+      addFigures();
+
+      // Hold cinematic headings for 6.5 seconds, while slide movement remains manual.
+      if (typeof win.updateDepthTypography === 'function') {
+        const originalTitleUpdate = win.updateDepthTypography;
+        let titleTimer;
+        win.updateDepthTypography = function (slide) {
+          const result = originalTitleUpdate.call(this, slide);
+          win.clearTimeout(titleTimer);
+          titleTimer = win.setTimeout(() => {
+            const title = doc.getElementById('depth-title');
+            const kicker = doc.getElementById('depth-kicker');
+            if (title) { title.classList.remove('visible'); title.classList.add('exiting'); }
+            if (kicker) { kicker.classList.remove('visible'); kicker.classList.add('exiting'); }
+          }, 6500);
+          return result;
+        };
+      }
+
+      const varyStatPositions = () => {
+        doc.querySelectorAll('.slide-overlay [data-count-target]').forEach((stat) => {
+          stat.classList.add('readability-float');
+          stat.style.setProperty('--float-x', `${Math.round(Math.random() * 14 - 7)}px`);
+          stat.style.setProperty('--float-y', `${Math.round(Math.random() * 12 - 6)}px`);
+        });
+      };
+      const originalGoToSlide = win.goToSlide;
+      if (typeof originalGoToSlide === 'function') {
+        win.goToSlide = function (index) {
+          const result = originalGoToSlide.call(this, index);
+          addFigures();
+          varyStatPositions();
+          return result;
+        };
+      }
+      varyStatPositions();
+    });
+  </script>
+</body>
+</html>
